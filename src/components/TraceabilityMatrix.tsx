@@ -4,6 +4,7 @@ import type { ContextConnection } from "../domain/contextConnections";
 import { compatibleRelationshipDirections } from "../domain/relationships";
 import { elementTypeLabels, type ElementType, type ModelElement, type Relationship } from "../domain/types";
 import { useAppStore } from "../store/useAppStore";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 export function TraceabilityMatrix({
   elements,
@@ -18,6 +19,7 @@ export function TraceabilityMatrix({
   columnTypes?: ElementType[];
   scopedElementIds?: Set<string>;
 }) {
+  const { confirm, alertUser } = useDialogs();
   const addRelationship = useAppStore((state) => state.addRelationship);
   const bindRequirementParameter = useAppStore((state) => state.bindRequirementParameter);
   const deleteRelationship = useAppStore((state) => state.deleteRelationship);
@@ -85,7 +87,7 @@ export function TraceabilityMatrix({
     if (!source) return;
     if (selectedParameter) {
       const error = bindRequirementParameter(source.id, selectedParameter.id);
-      if (error) window.alert(error);
+      if (error) void alertUser(error);
       else {
         setPending(null);
         setTargetChoice("");
@@ -112,7 +114,7 @@ export function TraceabilityMatrix({
       createdAt: now,
       updatedAt: now
     });
-    if (error) window.alert(error);
+    if (error) void alertUser(error);
     else {
       setPending(null);
       setTargetChoice("");
@@ -171,7 +173,7 @@ export function TraceabilityMatrix({
                             <button className="min-w-0 flex-1 text-left" title={`${relationship.sourceId} —${relationship.relationshipType}→ ${relationship.targetId}`} onClick={() => { selectRelationship(relationship.id); selectElement(counterpart?.id ?? null); }}>
                               <strong>{outgoing ? "→" : "←"} {relationship.relationshipType}</strong><br /><span className="line-clamp-2">{counterpart?.name}</span>
                             </button>
-                            <button aria-label={`Delete ${relationship.relationshipType} relationship`} className="rounded p-1 hover:bg-red-100 hover:text-red-700" onClick={() => { if (window.confirm("Delete this relationship?")) deleteRelationship(relationship.id); }}><Trash2 size={12} /></button>
+                            <button aria-label={`Delete ${relationship.relationshipType} relationship`} className="rounded p-1 hover:bg-red-100 hover:text-red-700" onClick={async () => { if (await confirm("Delete this relationship?", { confirmLabel: "Delete", tone: "danger" })) deleteRelationship(relationship.id); }}><Trash2 size={12} /></button>
                           </div>
                         );
                       })}

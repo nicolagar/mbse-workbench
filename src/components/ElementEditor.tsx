@@ -7,8 +7,10 @@ import { evaluateFormula } from "../domain/formulas";
 import { contextConnectionsForElement } from "../domain/contextConnections";
 import { elementTypeLabels, type FormulaBinding, type ModelElement, type Parameter, type Relationship, type ScalarValue } from "../domain/types";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 export function ElementEditor({ element, onSave }: { element: ModelElement; onSave?: () => void }) {
+  const { confirm } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const updateElement = useAppStore((state) => state.updateElement);
   const addRelationship = useAppStore((state) => state.addRelationship);
@@ -90,9 +92,9 @@ export function ElementEditor({ element, onSave }: { element: ModelElement; onSa
     addParameter(element.id, parameter);
   };
 
-  const remove = () => {
+  const remove = async () => {
     const affected = incoming.length + outgoing.length;
-    if (window.confirm(`Delete “${element.name}”? ${affected} relationships and ${contextReferences.length} typed context references will also be removed.`)) {
+    if (await confirm(`Delete "${element.name}"? ${affected} relationships and ${contextReferences.length} typed context references will also be removed.`, { confirmLabel: "Delete", tone: "danger" })) {
       deleteElement(element.id);
       selectElement(null);
     }

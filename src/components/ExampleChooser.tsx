@@ -2,12 +2,14 @@ import { RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { exampleProjectDefinitions, type ExampleProjectId } from "../data/examples";
 import { useAppStore } from "../store/useAppStore";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 export function ExampleChooser() {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const loadExampleProject = useAppStore((state) => state.loadExampleProject);
+  const { confirm } = useDialogs();
 
   useEffect(() => {
     if (!open) return;
@@ -25,8 +27,8 @@ export function ExampleChooser() {
     setOpen(false);
     window.requestAnimationFrame(() => triggerRef.current?.focus());
   };
-  const choose = (exampleId: ExampleProjectId, name: string) => {
-    if (!window.confirm(`Replace the active project with “${name}”? Other projects and snapshots will be retained.`)) return;
+  const choose = async (exampleId: ExampleProjectId, name: string) => {
+    if (!(await confirm(`Replace the active project with "${name}"? Other projects and snapshots will be retained.`, { confirmLabel: "Replace", cancelLabel: "Cancel" }))) return;
     loadExampleProject(exampleId);
     setOpen(false);
   };

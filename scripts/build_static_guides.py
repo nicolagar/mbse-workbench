@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
-"""Refresh the three static guides while preserving their established content.
+"""Refresh the three static guides in docs/guides/ while preserving their walkthrough body.
 
-The existing guide PDFs remain the visual/content baseline. This script replaces
-their cover with the current one-page introduction and appends the maintained
-Architect/Modeler answer reference with PDF bookmarks and an internal index.
+Reads each guide already committed under docs/guides/, replaces its cover with a
+current one-page introduction (app version and schema read live from package.json
+and persistence.ts), and appends the maintained Architect/Modeler answer reference
+with PDF bookmarks and an internal index. Safe to re-run: a previously appended
+handbook is detected and dropped first, so repeated runs never stack duplicates.
+Does not touch the original walkthrough screenshots/steps in the body pages -
+refreshing those to match the current UI is separate, manual documentation work.
 """
 
 from __future__ import annotations
 
+import json
 import re
+from datetime import date
 from pathlib import Path
 from typing import Iterable
 
@@ -32,11 +38,33 @@ from reportlab.platypus import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_DIR = ROOT / "tmp" / "pdfs" / "originals"
 WORK_DIR = ROOT / "tmp" / "pdfs" / "generated"
 OUTPUT_DIR = ROOT / "output" / "pdf"
 REPO_GUIDE_DIR = ROOT / "docs" / "guides"
 MARKDOWN = ROOT / "docs" / "user-guides" / "ARCHITECT_MODELER_GUIDE.md"
+PACKAGE_JSON = ROOT / "package.json"
+PERSISTENCE_TS = ROOT / "src" / "store" / "persistence.ts"
+
+
+def app_version() -> str:
+    """Read the live application version so the guide stamp never goes stale by hand."""
+    return json.loads(PACKAGE_JSON.read_text(encoding="utf-8"))["version"]
+
+
+def schema_version() -> str:
+    """Read the live schema version so the guide stamp never goes stale by hand."""
+    match = re.search(r"CURRENT_SCHEMA_VERSION\s*=\s*(\d+)", PERSISTENCE_TS.read_text(encoding="utf-8"))
+    if not match:
+        raise RuntimeError(f"Could not find CURRENT_SCHEMA_VERSION in {PERSISTENCE_TS}")
+    return match.group(1)
+
+
+def workflow_label() -> str:
+    return f"Workflow v{app_version()} - schema {schema_version()}"
+
+
+def refreshed_on() -> str:
+    return date.today().strftime("%-d %B %Y")
 
 NAVY = colors.HexColor("#122238")
 BLUE = colors.HexColor("#2563EB")
@@ -134,9 +162,9 @@ def header_footer(canvas, doc, short_title: str):
     canvas.setFont("Helvetica", 6.5)
     canvas.setFillColor(SLATE)
     canvas.drawString(18 * mm, 284 * mm, f"MBSE / MBPLE Workbench - {short_title}")
-    canvas.drawRightString(192 * mm, 284 * mm, "Workflow v1.5.3 - schema 9")
+    canvas.drawRightString(192 * mm, 284 * mm, workflow_label())
     canvas.line(18 * mm, 15 * mm, 192 * mm, 15 * mm)
-    canvas.drawString(18 * mm, 10 * mm, "03_Architect_view_v01 documentation update - 4 September 2026")
+    canvas.drawString(18 * mm, 10 * mm, f"Documentation update - {refreshed_on()}")
     canvas.drawRightString(192 * mm, 10 * mm, f"Page {doc.page}")
     canvas.restoreState()
 
@@ -263,8 +291,8 @@ def build_cover(path: Path, cfg: dict[str, str]):
     c.setFont("Helvetica", 7.5)
     c.setFillColor(SLATE)
     c.drawString(18 * mm, 40 * mm, clean(cfg["audience"]))
-    c.drawString(18 * mm, 35 * mm, "Current branch: 03_Architect_view_v01 - application v1.5.3 - schema 9")
-    c.drawString(18 * mm, 30 * mm, "Guide refreshed 4 September 2026. The introduction occupies this single page.")
+    c.drawString(18 * mm, 35 * mm, f"MBSE / MBPLE Workbench - application v{app_version()} - schema {schema_version()}")
+    c.drawString(18 * mm, 30 * mm, f"Guide refreshed {refreshed_on()}. The introduction occupies this single page.")
     c.setFillColor(NAVY)
     c.setFont("Helvetica-Bold", 7.5)
     c.drawString(18 * mm, 20 * mm, "Continue with the existing guide, then use the appended answer handbook for every Architect question group.")
@@ -328,28 +356,63 @@ def build_supplement(path: Path, cfg: dict[str, str]):
     doc.build(story)
 
 
+def previous_appendix_start(reader: PdfReader, appendix_title: str) -> int | None:
+    """Find where an earlier run's appended handbook begins, so re-running never stacks a second copy."""
+    target = clean(appendix_title)
+
+    def walk(nodes) -> int | None:
+        best = None
+        for node in nodes:
+            if isinstance(node, list):
+                found = walk(node)
+            else:
+                found = None
+                if clean(getattr(node, "title", "")) == target:
+                    try:
+                        found = reader.get_destination_page_number(node)
+                    except Exception:
+                        found = None
+            if found is not None and (best is None or found < best):
+                best = found
+        return best
+
+    try:
+        return walk(reader.outline)
+    except Exception:
+        return None
+
+
 def merge_guide(name: str, cfg: dict[str, str]):
-    source = SOURCE_DIR / name
+    """Refresh one guide's cover and appended handbook in place, keeping its original walkthrough body.
+
+    The source is the guide already committed under docs/guides/ - there is no separate pristine
+    "original" kept anywhere. Because of that, a previously appended handbook (detected by its
+    bookmark title) is stripped before appending a fresh one, so repeated runs stay idempotent
+    instead of stacking a new handbook copy onto the last one.
+    """
+    source = REPO_GUIDE_DIR / name
     if not source.exists():
         raise FileNotFoundError(source)
     WORK_DIR.mkdir(parents=True, exist_ok=True)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    REPO_GUIDE_DIR.mkdir(parents=True, exist_ok=True)
     cover = WORK_DIR / f"cover-{name}"
     supplement = WORK_DIR / f"supplement-{name}"
     build_cover(cover, cfg)
     build_supplement(supplement, cfg)
 
     base_reader = PdfReader(str(source))
+    cutoff = previous_appendix_start(base_reader, cfg["appendix"])
+    body_page_count = cutoff if cutoff is not None else len(base_reader.pages)
     cover_reader = PdfReader(str(cover))
     supplement_reader = PdfReader(str(supplement))
     writer = PdfWriter()
-    writer.clone_document_from_reader(base_reader)
+    for index in range(body_page_count):
+        writer.add_page(base_reader.pages[index])
     writer.pages[0].merge_page(cover_reader.pages[0], over=True)
     writer.append(supplement_reader, import_outline=True, outline_item=clean(cfg["appendix"]))
     writer.add_metadata({
         "/Title": clean(cfg["title"] + " - MBSE / MBPLE Workbench"),
-        "/Subject": "Workflow v1.5.3 / schema 9 / 03_Architect_view_v01",
+        "/Subject": f"Workflow v{app_version()} / schema {schema_version()}",
         "/Author": "MBSE / MBPLE Workbench",
         "/Keywords": "MBSE MBPLE Architect Modeler user guide",
     })

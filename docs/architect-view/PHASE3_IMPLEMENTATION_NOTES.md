@@ -21,6 +21,6 @@ Phase 3 completes the Trade-off adventure from early decision framing through va
 - Production build passed.
 - The local-only page could not be reached by the cloud visual browser, so no independent live-browser visual claim is made.
 
-See [`../../ACCEPTANCE_RESULTS_PARITY_CONSOLIDATION.md`](../../ACCEPTANCE_RESULTS_PARITY_CONSOLIDATION.md) for the current integrated Architect/Modeler acceptance record.
+See [`../../internal/ACCEPTANCE_RESULTS_PARITY_CONSOLIDATION.md`](../../internal/ACCEPTANCE_RESULTS_PARITY_CONSOLIDATION.md) for the current integrated Architect/Modeler acceptance record.
 
 This package is not deployed.

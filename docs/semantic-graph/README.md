@@ -38,4 +38,4 @@ The audit produces `IMPLEMENTED_REGISTER.md` and `COFFEE_OHSC_PARITY.json`. The 
 
 Browser acceptance used Chromium 153 with Playwright at 1440, 768 and 390 px. The reproducible browser harness is `verification/browser-semantic.mjs`; it needs Playwright and a compatible Chromium binary supplied by the environment. No browser dependency is bundled with the application.
 
-See the root `ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md` for measured results and rollout decisions; see `INTENTIONAL_CORRECTIONS.md` for clarifications relative to the six preserved specifications.
+See `internal/ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md` for measured results and rollout decisions; see `INTENTIONAL_CORRECTIONS.md` for clarifications relative to the six preserved specifications.

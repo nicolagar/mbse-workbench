@@ -14,6 +14,7 @@ import { migrateProject } from "../store/persistence";
 import { useAppStore } from "../store/useAppStore";
 import { StakeholderTraceabilityRecap } from "../components/StakeholderTraceabilityRecap";
 import { TraceabilityMatrix } from "../components/TraceabilityMatrix";
+import { DialogProvider } from "../components/dialogs/DialogProvider";
 import { contextConnections } from "../domain/contextConnections";
 import { modelSections, sectionProjectionElements } from "../domain/modelViews";
 import { runSimulation } from "../domain/simulation";
@@ -57,7 +58,7 @@ describe("Simplified ontology and end-to-end recap", () => {
     expect(projectedIds.has("PI-01")).toBe(true);
     expect(projectedIds.has("PC-05")).toBe(true);
     useAppStore.setState({ projects: [project], activeProjectId: project.id, selectedElementId: null });
-    render(<TraceabilityMatrix elements={projected} relationships={project.relationships.filter((edge) => projectedIds.has(edge.sourceId) && projectedIds.has(edge.targetId))} contextRelationships={references.filter((edge) => projectedIds.has(edge.sourceId) && projectedIds.has(edge.targetId))} columnTypes={modelSections["mission-context"].matrixTypes} />);
+    render(<DialogProvider><TraceabilityMatrix elements={projected} relationships={project.relationships.filter((edge) => projectedIds.has(edge.sourceId) && projectedIds.has(edge.targetId))} contextRelationships={references.filter((edge) => projectedIds.has(edge.sourceId) && projectedIds.has(edge.targetId))} columnTypes={modelSections["mission-context"].matrixTypes} /></DialogProvider>);
     expect(screen.getAllByText(/hasSOI/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/represented by/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/subject of use case/i).length).toBeGreaterThan(0);

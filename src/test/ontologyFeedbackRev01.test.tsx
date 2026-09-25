@@ -5,6 +5,7 @@ import { Dashboard } from "../components/Dashboard";
 import { SimplifiedTradeStudyWorkspace } from "../components/SimplifiedTradeStudyWorkspace";
 import { TraceabilityMatrix } from "../components/TraceabilityMatrix";
 import { VariabilityWorkspace } from "../components/VariabilityWorkspace";
+import { DialogProvider } from "../components/dialogs/DialogProvider";
 import { createOhscSampleProject } from "../data/ohscSample";
 import { createCoffeeMachineSampleProject } from "../data/sample";
 import { configurationReadiness } from "../domain/configurationReadiness";
@@ -40,11 +41,11 @@ describe("Ontology feedback Rev01", () => {
     const mission = ohsc.elements.find((item) => item.elementType === "mission")!;
     const system = ohsc.elements.find((item) => item.elementType === "system")!;
     const external = ohsc.elements.find((item) => item.elementType === "externalSystem")!;
-    render(<TraceabilityMatrix
+    render(<DialogProvider><TraceabilityMatrix
       elements={[mission, system, external]}
       relationships={ohsc.relationships}
       columnTypes={["system", "externalSystem"]}
-    />);
+    /></DialogProvider>);
     expect(screen.getByText("→ hasSOI")).toBeInTheDocument();
     expect(screen.getByText("→ participatesInMission")).toBeInTheDocument();
   });
@@ -86,7 +87,7 @@ describe("Ontology feedback Rev01", () => {
     const coffee = createCoffeeMachineSampleProject();
     useAppStore.setState({ projects: [coffee], activeProjectId: coffee.id, selectedConfigurationId: "configuration-balanced" });
     useAppStore.getState().setVariabilityTab("Configurator");
-    render(<VariabilityWorkspace />);
+    render(<DialogProvider><VariabilityWorkspace /></DialogProvider>);
     expect(screen.getByRole("heading", { name: "Configuration Recap" })).toBeInTheDocument();
     expect(screen.getByText("Eligible for Trade-off Study")).toBeInTheDocument();
     const table = screen.getByRole("table", { name: /Applied property values/i });
@@ -101,7 +102,7 @@ describe("Ontology feedback Rev01", () => {
     expect(screen.queryByLabelText("Active Trade Study")).not.toBeInTheDocument();
     dashboard.unmount();
 
-    render(<SimplifiedTradeStudyWorkspace />);
+    render(<DialogProvider><SimplifiedTradeStudyWorkspace /></DialogProvider>);
     const list = screen.getByRole("list", { name: "Requirements highlighted by study focus" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(project.comparisonStudies[0].mandatoryRequirementIds.length);
     expect(screen.getByRole("heading", { name: "Reference baseline and retained requirements" })).toBeInTheDocument();

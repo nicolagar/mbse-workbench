@@ -9,6 +9,7 @@ import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { FeatureGraphNode, graphPortId, type MeasuredGraphNodeData } from "./MeasuredGraphNodes";
 import { RoutedEdge, type RoutedEdgeData } from "./RoutedEdge";
 import { SideEditor } from "./SideEditor";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 const featureEdgeTypes = { routed: RoutedEdge };
 const featureNodeTypes = { featureGraphNode: FeatureGraphNode };
@@ -34,6 +35,7 @@ const nearestFeatureContext = (group: FeatureGroup, groups: FeatureGroup[]): str
 };
 
 export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature, onSelectFeature, readOnly = false }: FeatureGraphProps) {
+  const { alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const selectedFeatureId = useAppStore((state) => state.selectedFeatureId);
   const updateFeature = useAppStore((state) => state.updateFeature);
@@ -254,7 +256,7 @@ export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature
           sourceFeatureId: connection.source,
           targetFeatureId: connection.target
         });
-        if (error) window.alert(error);
+        if (error) void alertUser(error);
       }
       return;
     }

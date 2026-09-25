@@ -23,6 +23,7 @@ import type {
   ParetoAlternativeResult
 } from "../domain/types";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 const finite = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -132,6 +133,7 @@ function SummaryFact({ label, value }: { label: string; value: string }) {
 }
 
 export function ExpertTradeStudyEvidence({ study }: { study: ComparisonStudy }) {
+  const { promptText } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const updateStudy = useAppStore((state) => state.updateComparisonStudy);
   const result = latestFixedResult(study);
@@ -145,8 +147,8 @@ export function ExpertTradeStudyEvidence({ study }: { study: ComparisonStudy }) 
       }))}</tbody></table></div>
     </section>
     <section className="grid grid-cols-2 gap-4 max-xl:grid-cols-1">
-      <div className="card p-5"><h2 className="text-lg font-bold">Mandatory requirement evidence</h2>{study.alternativeRefs.map((alternative) => <article className="mt-3 rounded-lg border p-3" key={alternative.id}><div className="flex gap-2"><strong>{alternative.label}</strong><span className={`badge ${result.feasibility?.[alternative.id]?.status === "feasible" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{result.feasibility?.[alternative.id]?.status}</span></div>{result.feasibility?.[alternative.id]?.requirementEvidence.map((item) => <div className="mt-2 text-sm" key={item.requirementId}><div className="font-semibold">{item.requirementName} · {item.status}</div><div className="text-xs text-slate-600">{item.expression ?? "No formula"} · {item.evidence}</div></div>)}{result.feasibility?.[alternative.id]?.status !== "feasible" && <div className="mt-3 border-t pt-3"><div className="text-xs text-slate-600">{study.feasibilityExceptions?.[alternative.id]?.rationale || "No exception rationale recorded."}</div><div className="mt-2 flex flex-wrap gap-2"><button className="btn" onClick={() => {
-        const rationale = window.prompt("Document the feasibility-exception rationale. The alternative remains outside the normal recommendation.", study.feasibilityExceptions?.[alternative.id]?.rationale ?? "");
+      <div className="card p-5"><h2 className="text-lg font-bold">Mandatory requirement evidence</h2>{study.alternativeRefs.map((alternative) => <article className="mt-3 rounded-lg border p-3" key={alternative.id}><div className="flex gap-2"><strong>{alternative.label}</strong><span className={`badge ${result.feasibility?.[alternative.id]?.status === "feasible" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>{result.feasibility?.[alternative.id]?.status}</span></div>{result.feasibility?.[alternative.id]?.requirementEvidence.map((item) => <div className="mt-2 text-sm" key={item.requirementId}><div className="font-semibold">{item.requirementName} · {item.status}</div><div className="text-xs text-slate-600">{item.expression ?? "No formula"} · {item.evidence}</div></div>)}{result.feasibility?.[alternative.id]?.status !== "feasible" && <div className="mt-3 border-t pt-3"><div className="text-xs text-slate-600">{study.feasibilityExceptions?.[alternative.id]?.rationale || "No exception rationale recorded."}</div><div className="mt-2 flex flex-wrap gap-2"><button className="btn" onClick={async () => {
+        const rationale = await promptText("Document the feasibility-exception rationale. The alternative remains outside the normal recommendation.", study.feasibilityExceptions?.[alternative.id]?.rationale ?? "");
         if (!rationale?.trim()) return;
         updateStudy(study.id, {
           feasibilityExceptions: {
@@ -154,8 +156,8 @@ export function ExpertTradeStudyEvidence({ study }: { study: ComparisonStudy }) 
             [alternative.id]: { rationale: rationale.trim(), approvalState: "requested" }
           }
         }, true);
-      }}>Request documented exception</button>{study.feasibilityExceptions?.[alternative.id]?.approvalState === "requested" && <button className="btn" onClick={() => {
-        const approvedBy = window.prompt("Approver name");
+      }}>Request documented exception</button>{study.feasibilityExceptions?.[alternative.id]?.approvalState === "requested" && <button className="btn" onClick={async () => {
+        const approvedBy = await promptText("Approver name");
         if (!approvedBy?.trim()) return;
         updateStudy(study.id, {
           feasibilityExceptions: {
@@ -194,6 +196,7 @@ export function RiskMatrix({ study }: { study: ComparisonStudy }) {
 }
 
 export function RobustnessPanel({ study }: { study: ComparisonStudy }) {
+  const { alertUser } = useDialogs();
   const update = useAppStore((state) => state.updateComparisonStudy);
   const execute = useAppStore((state) => state.executeRobustness);
   const [name, setName] = useState("");
@@ -216,7 +219,7 @@ export function RobustnessPanel({ study }: { study: ComparisonStudy }) {
   return <div className="space-y-4">
     <section className="card p-5"><div className="flex flex-wrap items-start gap-3"><div><h2 className="text-xl font-bold">Bounded robustness analysis</h2><p className="mt-1 text-sm text-slate-600">Deterministic nominal, one-at-a-time bounds, combined pessimistic/optimistic cases and named scenarios. This is not Monte Carlo and reports no probabilities.</p></div><button className="btn btn-primary ml-auto" onClick={() => {
       const errors = execute(study.id);
-      if (errors.length) window.alert(errors.join("\n"));
+      if (errors.length) void alertUser(errors.join("\n"));
     }}><Play size={14} /> Run bounded analysis</button></div>
       <div className="mt-4 grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1"><label><span className="label">Scenario name</span><input className="field" value={name} onChange={(event) => setName(event.target.value)} /></label><label><span className="label">KPI effect</span><select className="field" value={kpiId} onChange={(event) => setKpiId(event.target.value)}>{study.selectedKpiIds.map((id) => <option value={id} key={id}>{id}</option>)}</select></label><label><span className="label">Percentage consequence</span><input className="field" type="number" value={percent} onChange={(event) => setPercent(Number(event.target.value))} /></label><div className="self-end"><button className="btn" onClick={addScenario}><Plus size={14} /> Save immutable scenario</button></div></div>
       <div className="mt-4 flex flex-wrap gap-2">{immutableScenarios.map((scenario) => <span className="badge bg-slate-100 text-slate-700" key={scenario.id}>{scenario.name} · {scenario.id}</span>)}</div>

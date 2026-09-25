@@ -24,6 +24,6 @@ Phase 2 implements the guided **Parameters, KPIs and simulation** section (AV-I0
 - TypeScript validation passed.
 - Production build passed.
 
-See [`../../ACCEPTANCE_RESULTS_PARITY_CONSOLIDATION.md`](../../ACCEPTANCE_RESULTS_PARITY_CONSOLIDATION.md) for the current integrated Architect/Modeler acceptance record.
+See [`../../internal/ACCEPTANCE_RESULTS_PARITY_CONSOLIDATION.md`](../../internal/ACCEPTANCE_RESULTS_PARITY_CONSOLIDATION.md) for the current integrated Architect/Modeler acceptance record.
 
 This package is not deployed. Phase 3 variability/configuration work is intentionally excluded.

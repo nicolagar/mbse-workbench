@@ -7,6 +7,7 @@ import { calculateSelectedKpis } from "../domain/presizing";
 import type { KPI, Parameter, StandardAlgorithmKey } from "../domain/types";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { UnitCatalogueDialog } from "./UnitCatalogueDialog";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 const algorithms: StandardAlgorithmKey[] = [
   "totalMass", "directElementCost", "processCost", "estimatedTotalCost", "totalPower",
@@ -35,6 +36,7 @@ export function ParametersWorkspace() {
 }
 
 function ParameterTable() {
+  const { confirm, promptText, alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addParameter = useAppStore((state) => state.addParameter);
   const updateParameter = useAppStore((state) => state.updateParameter);
@@ -44,43 +46,43 @@ function ParameterTable() {
   const [search, setSearch] = useState("");
   const entries = project.elements.flatMap((element) => element.parameters.map((parameter) => ({ element, parameter })))
     .filter(({ element, parameter }) => `${element.name} ${parameter.name} ${parameter.semanticKey}`.toLowerCase().includes(search.toLowerCase()));
-  const edit = (elementId: string, parameter: Parameter) => {
-    const name = window.prompt("Parameter name", parameter.name)?.trim();
+  const edit = async (elementId: string, parameter: Parameter) => {
+    const name = (await promptText("Parameter name", parameter.name))?.trim();
     if (!name) return;
-    const semanticKey = window.prompt("Semantic key", parameter.semanticKey)?.trim() ?? parameter.semanticKey;
-    const rawValue = window.prompt("Typed value (blank = null)", parameter.value === null ? "" : String(parameter.value));
+    const semanticKey = (await promptText("Semantic key", parameter.semanticKey))?.trim() ?? parameter.semanticKey;
+    const rawValue = await promptText("Typed value (blank = null)", parameter.value === null ? "" : String(parameter.value));
     if (rawValue === null) return;
     let value: Parameter["value"] = rawValue;
     if (parameter.dataType === "number") {
       value = rawValue.trim() === "" ? null : Number(rawValue);
-      if (value !== null && !Number.isFinite(value)) return window.alert("Numeric values must be finite or blank.");
+      if (value !== null && !Number.isFinite(value)) return void alertUser("Numeric values must be finite or blank.");
     } else if (parameter.dataType === "boolean") value = rawValue.toLowerCase() === "true";
-    const unit = window.prompt("Unit", parameter.unit ?? "") ?? parameter.unit;
-    const minimumText = window.prompt("Recommended minimum (blank = none)", parameter.minimum?.toString() ?? "");
-    const maximumText = window.prompt("Recommended maximum (blank = none)", parameter.maximum?.toString() ?? "");
-    const uncertaintyText = window.prompt("Uncertainty percent 0–100 (blank = none)", parameter.uncertaintyPercent?.toString() ?? "");
-    const valueOrigin = window.prompt("Value origin: entered, assumed, calculated, or simulated", parameter.valueOrigin)?.trim() as Parameter["valueOrigin"] | undefined;
-    if (!valueOrigin || !["entered", "assumed", "calculated", "simulated"].includes(valueOrigin)) return window.alert("Choose entered, assumed, calculated, or simulated.");
-    const source = window.prompt("Source / provenance", parameter.source ?? "");
+    const unit = (await promptText("Unit", parameter.unit ?? "")) ?? parameter.unit;
+    const minimumText = await promptText("Recommended minimum (blank = none)", parameter.minimum?.toString() ?? "");
+    const maximumText = await promptText("Recommended maximum (blank = none)", parameter.maximum?.toString() ?? "");
+    const uncertaintyText = await promptText("Uncertainty percent 0–100 (blank = none)", parameter.uncertaintyPercent?.toString() ?? "");
+    const valueOrigin = (await promptText("Value origin: entered, assumed, calculated, or simulated", parameter.valueOrigin))?.trim() as Parameter["valueOrigin"] | undefined;
+    if (!valueOrigin || !["entered", "assumed", "calculated", "simulated"].includes(valueOrigin)) return void alertUser("Choose entered, assumed, calculated, or simulated.");
+    const source = await promptText("Source / provenance", parameter.source ?? "");
     if (source === null) return;
     const minimum = minimumText?.trim() ? Number(minimumText) : undefined;
     const maximum = maximumText?.trim() ? Number(maximumText) : undefined;
     const uncertaintyPercent = uncertaintyText?.trim() ? Number(uncertaintyText) : undefined;
-    if (minimum !== undefined && maximum !== undefined && minimum > maximum) return window.alert("Minimum must not exceed maximum.");
-    if (uncertaintyPercent !== undefined && (!Number.isFinite(uncertaintyPercent) || uncertaintyPercent < 0 || uncertaintyPercent > 100)) return window.alert("Uncertainty must be between 0 and 100.");
-    const applicable = window.prompt("Applicable configuration IDs, comma-separated. Blank means every configuration.", parameter.applicableConfigurationIds.join(","));
+    if (minimum !== undefined && maximum !== undefined && minimum > maximum) return void alertUser("Minimum must not exceed maximum.");
+    if (uncertaintyPercent !== undefined && (!Number.isFinite(uncertaintyPercent) || uncertaintyPercent < 0 || uncertaintyPercent > 100)) return void alertUser("Uncertainty must be between 0 and 100.");
+    const applicable = await promptText("Applicable configuration IDs, comma-separated. Blank means every configuration.", parameter.applicableConfigurationIds.join(","));
     if (applicable === null) return;
     const applicableConfigurationIds = applicable.split(",").map((id) => id.trim()).filter(Boolean);
     const unknown = applicableConfigurationIds.filter((id) => !project.configurations.some((configuration) => configuration.id === id));
-    if (unknown.length) return window.alert(`Unknown configuration IDs: ${unknown.join(", ")}`);
+    if (unknown.length) return void alertUser(`Unknown configuration IDs: ${unknown.join(", ")}`);
     const unitOnly = unit !== parameter.unit && value === parameter.value;
     updateParameter(elementId, parameter.id, { name, semanticKey, value: unitOnly ? undefined : value, unit, minimum: unitOnly && minimum === parameter.minimum ? undefined : minimum, maximum: unitOnly && maximum === parameter.maximum ? undefined : maximum, uncertaintyPercent, valueOrigin, source, applicableConfigurationIds });
   };
-  const create = () => {
-    const ownerElementId = window.prompt("Owner element ID", project.elements[0]?.id)?.trim();
+  const create = async () => {
+    const ownerElementId = (await promptText("Owner element ID", project.elements[0]?.id))?.trim();
     const owner = project.elements.find((element) => element.id === ownerElementId);
-    if (!owner) return window.alert("Choose an existing owner element ID.");
-    const name = window.prompt("Parameter name", "New parameter")?.trim();
+    if (!owner) return void alertUser("Choose an existing owner element ID.");
+    const name = (await promptText("Parameter name", "New parameter"))?.trim();
     if (!name) return;
     const nowParameter: Parameter = {
       id: `parameter-${crypto.randomUUID()}`, ownerElementId: owner.id, name,
@@ -91,31 +93,32 @@ function ParameterTable() {
   };
   return <div className="space-y-4">
     <section className="card p-5"><div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Engineering input table</h2><p className="text-sm text-slate-500">Blank applicability means every configuration. Value-origin classification and source provenance are independently recorded.</p></div><div className="flex gap-2"><input className="field w-60" placeholder="Search owner, name, semantic key" value={search} onChange={(event) => setSearch(event.target.value)} /><button className="btn btn-primary" onClick={create}><Plus size={15} /> Parameter</button></div></div>
-      <div className="mt-4 overflow-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-slate-500"><th className="p-2">Owner / parameter</th><th>Semantic key</th><th>Value</th><th>Range</th><th>Origin</th><th>Applicability</th><th /></tr></thead><tbody>{entries.map(({ element, parameter }) => <tr className="border-b border-slate-100" key={parameter.id}><td className="p-2"><strong>{parameter.name}</strong><div className="text-xs text-slate-500">{element.name} · {parameter.id}</div></td><td><code>{parameter.semanticKey}</code></td><td>{parameter.value === null ? "Not available" : String(parameter.value)} {parameter.unit}</td><td>{parameter.minimum ?? "—"} … {parameter.maximum ?? "—"}{parameter.uncertaintyPercent !== undefined && ` · ±${parameter.uncertaintyPercent}%`}</td><td><span className={`badge ${parameter.valueOrigin === "entered" ? "bg-blue-50 text-blue-700" : parameter.valueOrigin === "assumed" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}>{parameter.valueOrigin}</span><div className="text-xs text-slate-500">{parameter.source || "No source"}</div></td><td>{parameter.applicableConfigurationIds.length ? parameter.applicableConfigurationIds.join(", ") : "Every configuration"}</td><td className="whitespace-nowrap"><button className="btn mr-1" onClick={() => edit(element.id, parameter)}>Edit</button><button className="btn btn-danger" onClick={() => {
+      <div className="mt-4 overflow-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-slate-500"><th className="p-2">Owner / parameter</th><th>Semantic key</th><th>Value</th><th>Range</th><th>Origin</th><th>Applicability</th><th /></tr></thead><tbody>{entries.map(({ element, parameter }) => <tr className="border-b border-slate-100" key={parameter.id}><td className="p-2"><strong>{parameter.name}</strong><div className="text-xs text-slate-500">{element.name} · {parameter.id}</div></td><td><code>{parameter.semanticKey}</code></td><td>{parameter.value === null ? "Not available" : String(parameter.value)} {parameter.unit}</td><td>{parameter.minimum ?? "—"} … {parameter.maximum ?? "—"}{parameter.uncertaintyPercent !== undefined && ` · ±${parameter.uncertaintyPercent}%`}</td><td><span className={`badge ${parameter.valueOrigin === "entered" ? "bg-blue-50 text-blue-700" : parameter.valueOrigin === "assumed" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}>{parameter.valueOrigin}</span><div className="text-xs text-slate-500">{parameter.source || "No source"}</div></td><td>{parameter.applicableConfigurationIds.length ? parameter.applicableConfigurationIds.join(", ") : "Every configuration"}</td><td className="whitespace-nowrap"><button className="btn mr-1" onClick={() => edit(element.id, parameter)}>Edit</button><button className="btn btn-danger" onClick={async () => {
           const references = project.kpis.filter((kpi) => kpi.inputParameterIds.includes(parameter.id) || kpi.formula?.includes(`param("${parameter.id}")`));
-          if (window.confirm(`Delete ${parameter.name}? ${references.length} KPI formula reference(s) may become invalid.`)) deleteParameter(element.id, parameter.id);
+          if (await confirm(`Delete ${parameter.name}? ${references.length} KPI formula reference(s) may become invalid.`, { confirmLabel: "Delete", tone: "danger" })) deleteParameter(element.id, parameter.id);
         }}><Trash2 size={14} /></button></td></tr>)}</tbody></table></div>
     </section>
-    <section className="card p-5"><h2 className="text-lg font-bold">Authoritative process duration</h2><p className="text-sm text-slate-500">Only metadata.duration and metadata.durationUnit are editable. One engineering day is assumed to equal eight hours.</p><div className="mt-3 grid grid-cols-3 gap-2">{project.elements.filter((element) => element.elementType === "processFunction").map((process) => <button className="rounded-lg border p-3 text-left" key={process.id} onClick={() => {
-      const duration = Number(window.prompt("Positive process duration", String(process.metadata.duration ?? "")));
-      const durationUnit = window.prompt("Unit: minute, hour, or day", process.metadata.durationUnit ?? "minute") as "minute" | "hour" | "day" | null;
-      if (!Number.isFinite(duration) || duration <= 0 || !durationUnit || !["minute", "hour", "day"].includes(durationUnit)) return window.alert("Enter a positive duration and valid unit.");
+    <section className="card p-5"><h2 className="text-lg font-bold">Authoritative process duration</h2><p className="text-sm text-slate-500">Only metadata.duration and metadata.durationUnit are editable. One engineering day is assumed to equal eight hours.</p><div className="mt-3 grid grid-cols-3 gap-2">{project.elements.filter((element) => element.elementType === "processFunction").map((process) => <button className="rounded-lg border p-3 text-left" key={process.id} onClick={async () => {
+      const duration = Number(await promptText("Positive process duration", String(process.metadata.duration ?? "")));
+      const durationUnit = (await promptText("Unit: minute, hour, or day", process.metadata.durationUnit ?? "minute")) as "minute" | "hour" | "day" | null;
+      if (!Number.isFinite(duration) || duration <= 0 || !durationUnit || !["minute", "hour", "day"].includes(durationUnit)) return void alertUser("Enter a positive duration and valid unit.");
       updateElement(process.id, { metadata: { ...process.metadata, duration, durationUnit } });
     }}><strong>{process.name}</strong><div className="text-sm text-slate-500">{process.metadata.duration ?? "Missing"} {process.metadata.durationUnit ?? ""}</div></button>)}</div></section>
     <section className="card p-5"><h2 className="text-lg font-bold">Industrial-component resource quantity</h2><p className="text-sm text-slate-500">The authoritative quantity lives on each industrial-system component —requiresResource→ resource relationship. Process cost and demand use the durations of the process functions realized by that component.</p><div className="mt-3 space-y-2">{project.relationships.filter((relationship) => relationship.relationshipType === "requiresResource").map((relationship) => {
       const source = project.elements.find((element) => element.id === relationship.sourceId);
       const target = project.elements.find((element) => element.id === relationship.targetId);
-      return <button className="flex w-full justify-between rounded-lg border p-3 text-left" key={relationship.id} onClick={() => {
-        const quantity = Number(window.prompt("Required component resource quantity (> 0)", String(relationship.requiredQuantity ?? 1)));
-        if (!Number.isFinite(quantity) || quantity <= 0) return window.alert("Required quantity must be finite and greater than zero.");
+      return <button className="flex w-full justify-between rounded-lg border p-3 text-left" key={relationship.id} onClick={async () => {
+        const quantity = Number(await promptText("Required component resource quantity (> 0)", String(relationship.requiredQuantity ?? 1)));
+        if (!Number.isFinite(quantity) || quantity <= 0) return void alertUser("Required quantity must be finite and greater than zero.");
         const error = updateRelationship(relationship.id, { requiredQuantity: quantity, quantity });
-        if (error) window.alert(error);
+        if (error) void alertUser(error);
       }}><span><strong>{source?.name}</strong> → {target?.name}</span><span>{relationship.requiredQuantity ?? "1 (default)"} {relationship.unit}</span></button>;
     })}</div></section>
   </div>;
 }
 
 function KpiTable() {
+  const { confirm, promptText, alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addKpi = useAppStore((state) => state.addKpi);
   const updateKpi = useAppStore((state) => state.updateKpi);
@@ -137,34 +140,34 @@ function KpiTable() {
   const matchingTokens = [...parameterTokens, ...kpiTokens].filter((item) =>
     `${item.label} ${item.id}`.toLowerCase().includes(tokenSearch.toLowerCase())
   );
-  const create = () => {
-    const name = window.prompt("KPI name", "New KPI")?.trim();
+  const create = async () => {
+    const name = (await promptText("KPI name", "New KPI"))?.trim();
     if (!name) return;
-    const mode = window.prompt("Mode: formula or standardAlgorithm", "formula") as KPI["calculationMode"] | null;
+    const mode = (await promptText("Mode: formula or standardAlgorithm", "formula")) as KPI["calculationMode"] | null;
     if (!mode || !["formula", "standardAlgorithm"].includes(mode)) return;
     const now = new Date().toISOString();
-    const formula = mode === "formula" ? window.prompt('Formula, e.g. param("parameter-id")', "1") ?? "1" : undefined;
-    const standardAlgorithmKey = mode === "standardAlgorithm" ? window.prompt(`Algorithm: ${algorithms.join(", ")}`, "totalMass") as StandardAlgorithmKey : undefined;
-    try { if (formula) parseKpiFormula(formula); } catch (error) { return window.alert(error instanceof Error ? error.message : "Invalid formula."); }
+    const formula = mode === "formula" ? (await promptText('Formula, e.g. param("parameter-id")', "1")) ?? "1" : undefined;
+    const standardAlgorithmKey = mode === "standardAlgorithm" ? (await promptText(`Algorithm: ${algorithms.join(", ")}`, "totalMass")) as StandardAlgorithmKey : undefined;
+    try { if (formula) parseKpiFormula(formula); } catch (error) { return void alertUser(error instanceof Error ? error.message : "Invalid formula."); }
     const id = `kpi-${crypto.randomUUID()}`;
-    addKpi({ id, name, description: "", objectiveIds: [], calculationMode: mode, formula, standardAlgorithmKey, outputUnit: window.prompt("Output unit", "") ?? "", optimizationDirection: "minimize", weight: 1, inputParameterIds: formula ? formulaReferences(parseKpiFormula(formula)).parameterIds : [], dependsOnKpiIds: formula ? formulaReferences(parseKpiFormula(formula)).kpiIds : [], calculationWarnings: [], createdAt: now, updatedAt: now });
+    addKpi({ id, name, description: "", objectiveIds: [], calculationMode: mode, formula, standardAlgorithmKey, outputUnit: (await promptText("Output unit", "")) ?? "", optimizationDirection: "minimize", weight: 1, inputParameterIds: formula ? formulaReferences(parseKpiFormula(formula)).parameterIds : [], dependsOnKpiIds: formula ? formulaReferences(parseKpiFormula(formula)).kpiIds : [], calculationWarnings: [], createdAt: now, updatedAt: now });
     if (mode === "formula") {
       setFormulaEditorId(id);
       setFormulaDraft(formula ?? "");
     }
   };
-  const edit = (kpi: KPI) => {
+  const edit = async (kpi: KPI) => {
     if (kpi.calculationMode === "formula") {
       setFormulaEditorId(kpi.id);
       setFormulaDraft(kpi.formula ?? "");
     } else {
-      const name = window.prompt("KPI name", kpi.name)?.trim();
+      const name = (await promptText("KPI name", kpi.name))?.trim();
       if (!name) return;
-      const description = window.prompt("KPI description", kpi.description) ?? kpi.description;
-      const outputUnit = window.prompt("Output unit", kpi.outputUnit) ?? kpi.outputUnit;
-      const optimizationDirection = window.prompt("Optimization direction: minimize or maximize", kpi.optimizationDirection)?.trim() as KPI["optimizationDirection"] | undefined;
-      const weight = Number(window.prompt("Weight", String(kpi.weight)));
-      if (!optimizationDirection || !["minimize", "maximize"].includes(optimizationDirection) || !Number.isFinite(weight)) return window.alert("Enter a valid optimization direction and finite weight.");
+      const description = (await promptText("KPI description", kpi.description)) ?? kpi.description;
+      const outputUnit = (await promptText("Output unit", kpi.outputUnit)) ?? kpi.outputUnit;
+      const optimizationDirection = (await promptText("Optimization direction: minimize or maximize", kpi.optimizationDirection))?.trim() as KPI["optimizationDirection"] | undefined;
+      const weight = Number(await promptText("Weight", String(kpi.weight)));
+      if (!optimizationDirection || !["minimize", "maximize"].includes(optimizationDirection) || !Number.isFinite(weight)) return void alertUser("Enter a valid optimization direction and finite weight.");
       updateKpi(kpi.id, { name, description, outputUnit, optimizationDirection, weight, formula: undefined });
     }
   };
@@ -172,7 +175,7 @@ function KpiTable() {
     const dependencies = kpi.calculationMode === "formula" && kpi.formula ? formulaReferences(parseKpiFormula(kpi.formula)).kpiIds : [];
     const calculation = calculateSelectedKpis(project, architectureCompatibleModel(project, project.activeArchitectureId ?? ""), [...dependencies, kpi.id]);
     const value = calculation.results.find((result) => result.kpiId === kpi.id);
-    window.alert(calculation.errors.length ? calculation.errors.join("\n") : `${kpi.name}: ${value?.value ?? "Not available"} ${value?.unit ?? kpi.outputUnit}\n${value?.warnings.join("\n") ?? ""}`);
+    void alertUser(calculation.errors.length ? calculation.errors.join("\n") : `${kpi.name}: ${value?.value ?? "Not available"} ${value?.unit ?? kpi.outputUnit}\n${value?.warnings.join("\n") ?? ""}`);
   };
   return <section className="card p-5"><div className="flex justify-between"><div><h2 className="text-lg font-bold">KPI definitions</h2><p className="text-sm text-slate-500">Formula references are exact stable IDs; no display-name matching or dynamic JavaScript is used.</p></div><button className="btn btn-primary" onClick={create}><Plus size={15} /> KPI</button></div>
     {formulaKpi && <div className="mt-4 rounded-xl border border-purple-200 bg-purple-50 p-4"><div className="flex justify-between"><div><h3 className="font-bold">Formula editor · {formulaKpi.name}</h3><p className="text-xs text-slate-600">Search the canonical model and insert exact immutable reference tokens.</p></div><button className="btn" onClick={() => setFormulaEditorId("")}>Close</button></div>
@@ -184,15 +187,15 @@ function KpiTable() {
           const references = formulaReferences(ast);
           updateKpi(formulaKpi.id, { formula: formulaDraft, inputParameterIds: references.parameterIds, dependsOnKpiIds: references.kpiIds, standardAlgorithmKey: undefined });
           setFormulaEditorId("");
-        } catch (error) { window.alert(error instanceof Error ? error.message : "Invalid formula."); }
+        } catch (error) { void alertUser(error instanceof Error ? error.message : "Invalid formula."); }
       }}>Validate and save formula</button>
     </div>}
     <div className="mt-4 space-y-3">{project.kpis.map((kpi) => {
       const details = kpi.standardAlgorithmKey ? algorithmDetails[kpi.standardAlgorithmKey] : undefined;
-      return <article className="rounded-lg border p-4" key={kpi.id}><div className="flex items-start gap-3"><div className="min-w-0 flex-1"><div className="flex gap-2"><h3 className="font-bold">{kpi.name}</h3><span className="badge bg-purple-50 text-purple-700">{kpi.calculationMode}</span>{details && <span className="badge bg-slate-100 text-slate-700">algorithm locked</span>}</div><code className="mt-1 block text-xs">{kpi.formula ?? kpi.standardAlgorithmKey}</code><p className="mt-1 text-xs text-slate-500">Output {kpi.outputUnit || "dimensionless"} · {kpi.optimizationDirection} · weight {kpi.weight} · {kpi.id}</p>{kpi.inputParameterIds.length > 0 && <p className="text-xs text-slate-500">Parameters: {kpi.inputParameterIds.join(", ")}</p>}{kpi.dependsOnKpiIds.length > 0 && <p className="text-xs text-slate-500">Required selected KPI dependencies: {kpi.dependsOnKpiIds.join(", ")}</p>}<fieldset className="mt-3"><legend className="label">Objectives measured by this KPI</legend><div className="flex flex-wrap gap-2">{project.elements.filter((element) => element.elementType === "objective").map((objective) => <label className={`rounded-lg border px-2 py-1 text-xs ${kpi.objectiveIds.includes(objective.id) ? "border-purple-300 bg-purple-50" : "border-slate-200"}`} key={objective.id}><input className="mr-1" type="checkbox" checked={kpi.objectiveIds.includes(objective.id)} onChange={(event) => updateKpi(kpi.id, { objectiveIds: event.target.checked ? [...kpi.objectiveIds, objective.id] : kpi.objectiveIds.filter((id) => id !== objective.id) })} />{objective.name}</label>)}</div></fieldset>{kpi.standardAlgorithmKey === "totalMass" && <MassContributions />}{details && <details className="mt-3 rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-xs"><summary className="cursor-pointer font-semibold text-blue-900">Standard algorithm explanation</summary><dl className="mt-2 grid grid-cols-[100px_1fr] gap-2"><dt className="font-semibold">Logic</dt><dd>{details.logic}</dd><dt className="font-semibold">Inputs</dt><dd>{details.inputs}</dd><dt className="font-semibold">Output</dt><dd>{details.unit}</dd><dt className="font-semibold">Conditions / limitations</dt><dd>{details.limitations}</dd></dl></details>}</div><button className="btn" onClick={() => preview(kpi)}><Calculator size={14} /> Preview</button><button className="btn" onClick={() => edit(kpi)}>Edit metadata</button><button className="btn btn-danger" onClick={() => {
-        if (!window.confirm(`Delete KPI ${kpi.name}? Historical evidence may require it to be retained.`)) return;
+      return <article className="rounded-lg border p-4" key={kpi.id}><div className="flex items-start gap-3"><div className="min-w-0 flex-1"><div className="flex gap-2"><h3 className="font-bold">{kpi.name}</h3><span className="badge bg-purple-50 text-purple-700">{kpi.calculationMode}</span>{details && <span className="badge bg-slate-100 text-slate-700">algorithm locked</span>}</div><code className="mt-1 block text-xs">{kpi.formula ?? kpi.standardAlgorithmKey}</code><p className="mt-1 text-xs text-slate-500">Output {kpi.outputUnit || "dimensionless"} · {kpi.optimizationDirection} · weight {kpi.weight} · {kpi.id}</p>{kpi.inputParameterIds.length > 0 && <p className="text-xs text-slate-500">Parameters: {kpi.inputParameterIds.join(", ")}</p>}{kpi.dependsOnKpiIds.length > 0 && <p className="text-xs text-slate-500">Required selected KPI dependencies: {kpi.dependsOnKpiIds.join(", ")}</p>}<fieldset className="mt-3"><legend className="label">Objectives measured by this KPI</legend><div className="flex flex-wrap gap-2">{project.elements.filter((element) => element.elementType === "objective").map((objective) => <label className={`rounded-lg border px-2 py-1 text-xs ${kpi.objectiveIds.includes(objective.id) ? "border-purple-300 bg-purple-50" : "border-slate-200"}`} key={objective.id}><input className="mr-1" type="checkbox" checked={kpi.objectiveIds.includes(objective.id)} onChange={(event) => updateKpi(kpi.id, { objectiveIds: event.target.checked ? [...kpi.objectiveIds, objective.id] : kpi.objectiveIds.filter((id) => id !== objective.id) })} />{objective.name}</label>)}</div></fieldset>{kpi.standardAlgorithmKey === "totalMass" && <MassContributions />}{details && <details className="mt-3 rounded-lg border border-blue-100 bg-blue-50/50 p-3 text-xs"><summary className="cursor-pointer font-semibold text-blue-900">Standard algorithm explanation</summary><dl className="mt-2 grid grid-cols-[100px_1fr] gap-2"><dt className="font-semibold">Logic</dt><dd>{details.logic}</dd><dt className="font-semibold">Inputs</dt><dd>{details.inputs}</dd><dt className="font-semibold">Output</dt><dd>{details.unit}</dd><dt className="font-semibold">Conditions / limitations</dt><dd>{details.limitations}</dd></dl></details>}</div><button className="btn" onClick={() => preview(kpi)}><Calculator size={14} /> Preview</button><button className="btn" onClick={() => edit(kpi)}>Edit metadata</button><button className="btn btn-danger" onClick={async () => {
+        if (!(await confirm(`Delete KPI ${kpi.name}? Historical evidence may require it to be retained.`, { confirmLabel: "Delete", tone: "danger" }))) return;
         const error = deleteKpi(kpi.id);
-        if (error) window.alert(error);
+        if (error) void alertUser(error);
       }}><Trash2 size={14} /></button></div></article>;
     })}</div>
   </section>;

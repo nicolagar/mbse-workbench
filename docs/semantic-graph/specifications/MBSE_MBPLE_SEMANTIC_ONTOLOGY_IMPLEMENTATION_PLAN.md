@@ -29,7 +29,7 @@ Mandatory inputs are the updated architecture plus the current-code inventory, m
 4. Serialize Coffee and OHSC Projects as golden fixtures.
 5. Capture requirement assessments, configuration validation, derivations, KPIs, runs, studies, Decisions, baseline, snapshots and native exports.
 6. Capture current Scope Ontology and Trade Study ontology node/edge sets.
-7. Start `ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md`.
+7. Start `internal/ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md`.
 
 Gate: clean or explicitly documented baseline before implementation.
 
@@ -124,7 +124,7 @@ Enable flags individually only after their gate passes. Keep one-action access t
 - additive beta views;
 - semantic export;
 - README/CHANGELOG updates;
-- `ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md`;
+- `internal/ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md`;
 - register-conformance report;
 - Coffee/OHSC before/after comparison;
 - intentional-corrections list;

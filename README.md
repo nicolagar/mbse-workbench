@@ -10,7 +10,7 @@ Every project can be opened in two synchronized perspectives. **Architect view**
 
 Choose **Architecture definition** for a traceable product and industrial-system architecture, **Architecture and simulation** to add KPI evidence for the current architecture, or **Trade-off** to configure, derive, simulate and compare alternatives. The Project Workflow separates Problem Space from Solution Space and recommends the earliest incomplete activity. For a field-by-field explanation of both perspectives and every guided question group, see the [Architect and Modeler views user guide](docs/user-guides/ARCHITECT_MODELER_GUIDE.md), the [worked-example guide](docs/user-guides/EXAMPLES_GUIDE.md) and the [static PDF guides](docs/guides/README.md).
 
-Version 1.8.0 / schema 14 refines the guided workflow without changing its canonical ontology. Architect starts with the project aim, captures external systems and roles through existing canonical relationships, and shows the growing model as a semantic left-to-right thread. Architecture-and-simulation work uses the current architecture automatically and asks for KPI calculation, inputs, units, targets and limits without trade-study direction or weight questions. Live project assumptions and acknowledgement prompts are removed; imported legacy simulation-run evidence remains immutable and readable. Modeler exposes real precedence graphs for every function sequence, integrates organizational feature groups into the feature table, and uses the name Model Digital Thread for the end-to-end model view. See [the ontology update](ONTOLOGY_UPDATE.md) for the schema behavior and the [senior engineering review](ONTOLOGY_REVIEW.md) for sample acceptance and demonstrator limits. The application is intended for small, bounded early-phase engineering studies. It is not a certified engineering-analysis tool, professional SysML/PLM platform, regulatory-compliance system, probabilistic uncertainty engine, or substitute for verified detailed-design substantiation.
+Version 1.8.0 / schema 14 refines the guided workflow without changing its canonical ontology. Architect starts with the project aim, captures external systems and roles through existing canonical relationships, and shows the growing model as a semantic left-to-right thread. Architecture-and-simulation work uses the current architecture automatically and asks for KPI calculation, inputs, units, targets and limits without trade-study direction or weight questions. Live project assumptions and acknowledgement prompts are removed; imported legacy simulation-run evidence remains immutable and readable. Modeler exposes real precedence graphs for every function sequence, integrates organizational feature groups into the feature table, and uses the name Model Digital Thread for the end-to-end model view. See [the ontology update](internal/ONTOLOGY_UPDATE.md) for the schema behavior and the [senior engineering review](internal/ONTOLOGY_REVIEW.md) for sample acceptance and demonstrator limits. The application is intended for small, bounded early-phase engineering studies. It is not a certified engineering-analysis tool, professional SysML/PLM platform, regulatory-compliance system, probabilistic uncertainty engine, or substitute for verified detailed-design substantiation.
 
 ## Architecture Trade Study methodology
 
@@ -28,7 +28,7 @@ Version 1.8.0 / schema 14 refines the guided workflow without changing its canon
 - Approval requires an explicit feasible selection, rationale and baseline confirmation, and captures its evidence links
 - Schema-8 Pareto, SMART/MAVT, sensitivity, risk, scenario and robustness history remains readable and exportable for backward compatibility
 
-The detailed method and ontology are recorded in [`TRADE_STUDY_METHODOLOGY.md`](TRADE_STUDY_METHODOLOGY.md).
+The detailed method and ontology are recorded in [`TRADE_STUDY_METHODOLOGY.md`](internal/TRADE_STUDY_METHODOLOGY.md).
 
 ## Stage C capabilities
 
@@ -279,11 +279,15 @@ Malformed or structurally invalid JSON opens the recovery screen. The original r
 
 Stage C completes the A → B → C demonstrator: it models and traces programme intent, manages MBPLE variability, derives deterministic 100% realizations, performs preliminary KPI calculations, compares saved evidence, records decisions, creates basic local recovery snapshots, and exports selected evidence. It remains a local, single-user early-phase workbench—not enterprise version control, a collaborative PLM repository, an optimization solver, or a certified detailed-design analysis tool.
 
-See [ACCEPTANCE_RESULTS_A.md](./ACCEPTANCE_RESULTS_A.md) for the verified Stage-A record.
-See [ACCEPTANCE_RESULTS_B.md](./ACCEPTANCE_RESULTS_B.md) for the verified Stage-B record.
-See [ACCEPTANCE_RESULTS_C.md](./ACCEPTANCE_RESULTS_C.md) for the verified Stage-C record.
-See [ACCEPTANCE_RESULTS_POST_FIX_V01.md](./ACCEPTANCE_RESULTS_POST_FIX_V01.md) for the 1.5.2 post-fix verification record and browser-environment limitation.
+See [ACCEPTANCE_RESULTS_A.md](internal/ACCEPTANCE_RESULTS_A.md) for the verified Stage-A record.
+See [ACCEPTANCE_RESULTS_B.md](internal/ACCEPTANCE_RESULTS_B.md) for the verified Stage-B record.
+See [ACCEPTANCE_RESULTS_C.md](internal/ACCEPTANCE_RESULTS_C.md) for the verified Stage-C record.
+See [ACCEPTANCE_RESULTS_POST_FIX_V01.md](internal/ACCEPTANCE_RESULTS_POST_FIX_V01.md) for the 1.5.2 post-fix verification record and browser-environment limitation.
 
 ## Semantic ontology V04 preview
 
-A project-independent generic stereotype map is available in **Scope ontology**, with filters for Architecture building, Architecture building + simulation and Trade Study. It uses one Semantic relationship style and a reduced workflow mapping. Project Digital Thread, Ontology Schema and Stored schema graph/register are not exposed on this page. Schema 14, domain engines and native exports are preserved. See [the V04 guide](docs/semantic-graph/README.md) and [acceptance results](ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md).
+A project-independent generic stereotype map is available in **Scope ontology**, with filters for Architecture building, Architecture building + simulation and Trade Study. It uses one Semantic relationship style and a reduced workflow mapping. Project Digital Thread, Ontology Schema and Stored schema graph/register are not exposed on this page. Schema 14, domain engines and native exports are preserved. See [the V04 guide](docs/semantic-graph/README.md) and [acceptance results](internal/ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md).
+
+## Internal engineering records
+
+Acceptance-test records, manual review checklists, superseded specifications, and the original build prompts live in [`internal/`](internal/) rather than the repository root, to keep the root focused on product documentation.

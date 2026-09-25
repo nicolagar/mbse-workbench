@@ -3,11 +3,13 @@ import { useMemo, useState } from "react";
 import { allowedRelationships } from "../domain/relationships";
 import { elementTypeLabels, type Relationship, type RelationshipType } from "../domain/types";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 const carriesQuantity = (type: RelationshipType) => ["requiresResource", "consumes", "produces"].includes(type);
 const carriesItemFlow = (type: RelationshipType) => ["consumes", "produces"].includes(type);
 
 export function RelationshipManager() {
+  const { confirm, alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addRelationship = useAppStore((state) => state.addRelationship);
   const updateRelationship = useAppStore((state) => state.updateRelationship);
@@ -106,10 +108,10 @@ export function RelationshipManager() {
                     ? nextTarget.architectureId
                     : undefined;
                 const message = updateRelationship(edge.id, { ...patch, architectureId });
-                if (message) window.alert(message);
+                if (message) void alertUser(message);
               }}
-              onDelete={() => {
-                if (window.confirm("Delete this relationship?")) deleteRelationship(edge.id);
+              onDelete={async () => {
+                if (await confirm("Delete this relationship?", { confirmLabel: "Delete", tone: "danger" })) deleteRelationship(edge.id);
               }}
             />
           ))}</tbody>

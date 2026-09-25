@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { createCoffeeMachineSampleProject } from "../data/sample";
@@ -150,11 +150,13 @@ describe("project persistence regressions", () => {
     expect(() => buildExportPackage(loaded.state!.projects[0], defaultExportFilters())).not.toThrow();
   });
 
-  it("Reset all removes every project and snapshot and creates one empty active project", () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+  it("Reset all removes every project and snapshot and creates one empty active project", async () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: "Reset all" }));
+    const resetDialog = screen.getByRole("dialog", { name: "Confirm" });
+    fireEvent.click(within(resetDialog).getByRole("button", { name: "Reset" }));
+    await waitFor(() => expect(useAppStore.getState().projects).toHaveLength(1));
 
     const state = useAppStore.getState();
     expect(state.projects).toHaveLength(1);

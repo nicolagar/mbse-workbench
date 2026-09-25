@@ -12,6 +12,7 @@ import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { ElementEditor } from "./ElementEditor";
 import { FeatureGraph } from "./FeatureGraph";
 import { ModelGraph } from "./ModelGraph";
+import { useDialogs } from "./dialogs/DialogProvider";
 import {
   ConfigurationEditor,
   FeatureConstraintEditor,
@@ -68,6 +69,7 @@ export function VariabilityWorkspace() {
 }
 
 function FeatureModel() {
+  const { confirm, alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addFeature = useAppStore((state) => state.addFeature);
   const updateFeature = useAppStore((state) => state.updateFeature);
@@ -118,7 +120,7 @@ function FeatureModel() {
     if (selected) setEditor({ kind: "feature", value: structuredClone(selected), isNew: false });
     selectFeature(null);
   }, [project.features, selectFeature, selectedFeatureId]);
-  const remove = (feature: Feature) => {
+  const remove = async (feature: Feature) => {
     const descendants = descendantsOf(project.features, feature.id);
     const constraints = project.featureConstraints.filter((item) => [item.sourceFeatureId, item.targetFeatureId].some((id) => id === feature.id || descendants.includes(id)));
     const configurations = project.configurations.filter((item) => item.effectiveSelectedFeatureIds.some((id) => id === feature.id || descendants.includes(id)));
@@ -128,7 +130,7 @@ function FeatureModel() {
       || item.valueRules.some((rule) => rule.featureExpression.includes(feature.id) || rule.featureValueConditions.some((condition) => condition.featureId === feature.id))
     );
     const detail = `${descendants.length} descendant(s), ${constraints.length} constraint(s), ${configurations.length} configuration(s), and ${variationPoints.length} variation point(s) will be cleaned up.`;
-    if (window.confirm(`Delete “${feature.name}” and its references?\n\n${detail}\n\nAffected variation points are removed completely, never silently rewritten.`)) deleteFeature(feature.id);
+    if (await confirm(`Delete "${feature.name}" and its references?\n\n${detail}\n\nAffected variation points are removed completely, never silently rewritten.`, { confirmLabel: "Delete", tone: "danger" })) deleteFeature(feature.id);
   };
   const featureName = (id: string) => project.features.find((feature) => feature.id === id)?.name ?? id;
   return (
@@ -143,9 +145,9 @@ function FeatureModel() {
         <table className="w-full text-sm"><thead><tr className="border-b text-left text-slate-500"><th className="p-2">Tree / name</th><th>ID</th><th>Cardinality</th><th>Value</th><th>Scope</th><th>Parent / group</th><th /></tr></thead>
           <tbody>{featureRows.map((row) => row.kind === "group" ? <tr className="border-b border-purple-100 bg-purple-50/70" key={`group-${row.value.id}`}>
             <td className="p-2 font-semibold text-purple-950" style={{ paddingLeft: `${8 + row.depth * 22}px` }}>{row.depth > 0 && "↳ "}{row.value.name}</td><td className="font-mono text-xs text-purple-700">{row.value.id}</td><td><span className="badge bg-purple-100 text-purple-800">Group · nonselectable</span></td><td>—</td><td>Organization</td><td><span className="font-mono text-xs">{row.value.parentGroupId ?? row.value.parentFeatureId ?? "—"}</span><div className="text-xs text-slate-500">order {row.value.sortOrder}</div></td>
-            <td className="whitespace-nowrap text-right"><button className="btn mr-1" onClick={() => setEditor({ kind: "group", value: structuredClone(row.value), isNew: false })}>Edit</button><button className="btn btn-danger" onClick={() => {
-              if (project.variabilityAxes.some((axis) => axis.featureGroupId === row.value.id)) return window.alert("This FeatureGroup is managed by a variability axis. Delete the axis from guided Trade Study setup.");
-              if (window.confirm(`Delete “${row.value.name}” and its nested organizational groups? Features remain in the canonical feature model and are detached from the deleted groups.`)) deleteFeatureGroup(row.value.id);
+            <td className="whitespace-nowrap text-right"><button className="btn mr-1" onClick={() => setEditor({ kind: "group", value: structuredClone(row.value), isNew: false })}>Edit</button><button className="btn btn-danger" onClick={async () => {
+              if (project.variabilityAxes.some((axis) => axis.featureGroupId === row.value.id)) return void alertUser("This FeatureGroup is managed by a variability axis. Delete the axis from guided Trade Study setup.");
+              if (await confirm(`Delete "${row.value.name}" and its nested organizational groups? Features remain in the canonical feature model and are detached from the deleted groups.`, { confirmLabel: "Delete", tone: "danger" })) deleteFeatureGroup(row.value.id);
             }}><Trash2 size={14} /></button></td>
           </tr> : <tr className="border-b border-slate-100" key={row.value.id}>
             <td className="p-2 font-semibold" style={{ paddingLeft: `${8 + row.depth * 22}px` }}>{row.depth > 0 && "↳ "}{row.value.name}</td><td className="font-mono text-xs">{row.value.id}</td><td><span className="badge bg-blue-50 text-blue-700">{row.value.featureType}</span></td><td>{row.value.valueType === "enumeration" ? row.value.allowedValues?.join(" / ") : "Boolean"}</td><td>{row.value.variabilityScope ?? "external"}</td><td><span className="font-mono text-xs">{row.value.parentId ?? row.value.parentGroupId ?? "—"}</span><div className="text-xs text-slate-500">{row.value.groupId ?? `order ${row.value.sortOrder}`}</div></td>
@@ -161,16 +163,16 @@ function FeatureModel() {
     {editor?.kind === "feature" && <FeatureEditor initial={editor.value} onCancel={() => setEditor(null)} onSave={(feature) => {
       if (editor.isNew) addFeature(feature); else updateFeature(feature.id, feature);
       setEditor(null);
-    }} onDelete={editor.isNew ? undefined : () => { remove(editor.value); setEditor(null); }} />}
+    }} onDelete={editor.isNew ? undefined : async () => { await remove(editor.value); setEditor(null); }} />}
     {editor?.kind === "group" && <FeatureGroupEditor initial={editor.value} onCancel={() => setEditor(null)} onSave={(group) => {
       if (editor.isNew) addFeatureGroup(group); else updateFeatureGroup(group.id, group);
       setEditor(null);
-    }} onDelete={editor.isNew ? undefined : () => {
+    }} onDelete={editor.isNew ? undefined : async () => {
       if (project.variabilityAxes.some((axis) => axis.featureGroupId === editor.value.id)) {
-        window.alert("This FeatureGroup is managed by a variability axis. Delete the axis from guided Trade Study setup.");
+        void alertUser("This FeatureGroup is managed by a variability axis. Delete the axis from guided Trade Study setup.");
         return;
       }
-      if (window.confirm(`Delete “${editor.value.name}” and its nested organizational groups?`)) deleteFeatureGroup(editor.value.id);
+      if (await confirm(`Delete "${editor.value.name}" and its nested organizational groups?`, { confirmLabel: "Delete", tone: "danger" })) deleteFeatureGroup(editor.value.id);
       setEditor(null);
     }} />}
     {editor?.kind === "constraint" && <FeatureConstraintEditor initial={editor.value} onCancel={() => setEditor(null)} onSave={(constraint) => {
@@ -183,6 +185,7 @@ function FeatureModel() {
 }
 
 function VariationPoints() {
+  const { confirm } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const add = useAppStore((state) => state.addVariationPoint);
   const update = useAppStore((state) => state.updateVariationPoint);
@@ -267,7 +270,7 @@ function VariationPoints() {
         summary = error instanceof Error ? error.message : "Invalid condition";
       }
       return <article className={`rounded-lg border p-4 ${variationPoint.enabled ? "" : "opacity-60"}`} key={variationPoint.id}>
-        <div className="flex items-start gap-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><strong>{variationPoint.name}</strong><span className="badge bg-blue-50 text-blue-700">{variationPoint.kind}</span>{variationPoint.scope && <span className="badge bg-slate-100">{variationPoint.scope}</span>}{!variationPoint.enabled && <span className="badge bg-slate-100">disabled</span>}</div><code className="mt-1 block text-xs">{variationPoint.featureExpression || "always"}{variationPoint.featureValueConditions.length ? ` · ${variationPoint.featureValueConditions.map((condition) => `${condition.featureId}${condition.operator === "equals" ? "=" : "!="}${condition.value}`).join(", ")}` : ""}</code><p className="text-xs text-slate-500">{summary}</p></div><button className="btn" onClick={() => setEditor(structuredClone(variationPoint))}>Edit</button><button className="btn" onClick={() => update(variationPoint.id, { enabled: !variationPoint.enabled })}>{variationPoint.enabled ? "Disable" : "Enable"}</button><button className="btn btn-danger" onClick={() => { if (window.confirm(`Delete “${variationPoint.name}”?`)) remove(variationPoint.id); }}><Trash2 size={14} /></button></div>
+        <div className="flex items-start gap-3"><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><strong>{variationPoint.name}</strong><span className="badge bg-blue-50 text-blue-700">{variationPoint.kind}</span>{variationPoint.scope && <span className="badge bg-slate-100">{variationPoint.scope}</span>}{!variationPoint.enabled && <span className="badge bg-slate-100">disabled</span>}</div><code className="mt-1 block text-xs">{variationPoint.featureExpression || "always"}{variationPoint.featureValueConditions.length ? ` · ${variationPoint.featureValueConditions.map((condition) => `${condition.featureId}${condition.operator === "equals" ? "=" : "!="}${condition.value}`).join(", ")}` : ""}</code><p className="text-xs text-slate-500">{summary}</p></div><button className="btn" onClick={() => setEditor(structuredClone(variationPoint))}>Edit</button><button className="btn" onClick={() => update(variationPoint.id, { enabled: !variationPoint.enabled })}>{variationPoint.enabled ? "Disable" : "Enable"}</button><button className="btn btn-danger" onClick={async () => { if (await confirm(`Delete "${variationPoint.name}"?`, { confirmLabel: "Delete", tone: "danger" })) remove(variationPoint.id); }}><Trash2 size={14} /></button></div>
         <div className="mt-3 grid gap-2 text-xs md:grid-cols-2"><div><span className="font-semibold">Targets</span><div>{[...variationPoint.constrainedElementIds, ...variationPoint.constrainedRelationshipIds].map(targetName).join(", ")}</div></div><div><span className="font-semibold">Effect</span><div>{variationPoint.kind === "existence" ? "Include when condition is true; otherwise remove." : `${variationPoint.propertyPath ?? "Missing property"} · ${variationPoint.valueRules.length} value rule(s)`}</div></div></div>
         {variationPoint.kind !== "existence" && <div className="mt-3 rounded-md bg-slate-50 p-3 text-xs"><strong>Ordered value rules</strong>{variationPoint.valueRules.map((rule, index) => <div className="mt-2 flex items-center gap-2" key={rule.id}><span>{index + 1}.</span><code className="flex-1">{rule.featureExpression || "fallback"}{rule.featureValueConditions.length ? ` · ${rule.featureValueConditions.map((condition) => `${condition.featureId}${condition.operator === "equals" ? "=" : "!="}${condition.value}`).join(", ")}` : ""} → {JSON.stringify(rule.value)}</code></div>)}</div>}
       </article>;
@@ -278,8 +281,8 @@ function VariationPoints() {
       else add(variationPoint);
       setEditor(null);
       return null;
-    }} onDelete={project.variationPoints.some((candidate) => candidate.id === editor.id) ? () => {
-      if (window.confirm(`Delete “${editor.name}”?`)) remove(editor.id);
+    }} onDelete={project.variationPoints.some((candidate) => candidate.id === editor.id) ? async () => {
+      if (await confirm(`Delete "${editor.name}"?`, { confirmLabel: "Delete", tone: "danger" })) remove(editor.id);
       setEditor(null);
     } : undefined} />}
     {chooser.length > 0 && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4"><section className="w-full max-w-lg rounded-xl bg-white p-4 shadow-2xl"><h3 className="font-bold">Choose variation point to edit</h3><p className="mt-1 text-sm text-slate-500">Several variation points affect this target.</p><div className="mt-3 space-y-2">{chooser.map((variationPoint) => <button className="btn w-full justify-start" key={variationPoint.id} onClick={() => { setEditor(structuredClone(variationPoint)); setChooser([]); }}>{variationPoint.name} · {variationPoint.kind}</button>)}</div><button className="btn mt-3 w-full" onClick={() => setChooser([])}>Cancel</button></section></div>}
@@ -325,6 +328,7 @@ function configuratorFeatureRows(features: Feature[], groups: FeatureGroup[]): C
 }
 
 function Configurator({ configurationId, setConfigurationId }: { configurationId: string; setConfigurationId: (id: string) => void }) {
+  const { confirm, alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const add = useAppStore((state) => state.addConfiguration);
   const update = useAppStore((state) => state.updateConfiguration);
@@ -337,7 +341,7 @@ function Configurator({ configurationId, setConfigurationId }: { configurationId
   const archivedConfigurations = project.configurations.filter((item) => item.archivedAt);
   const findings = configuration ? validateConfiguration(project, configuration) : [];
   const [configurationDraft, setConfigurationDraft] = useState<Configuration | null>(null);
-  const toggle = (feature: Feature, selected: boolean) => {
+  const toggle = async (feature: Feature, selected: boolean) => {
     if (!configuration || feature.featureType === "root" || feature.featureType === "mandatory") return;
     let manual = [...configuration.manuallySelectedFeatureIds];
     let automatic = [...configuration.automaticConstraintFeatureIds];
@@ -351,8 +355,8 @@ function Configurator({ configurationId, setConfigurationId }: { configurationId
       for (const constraint of project.featureConstraints.filter((item) => item.type === "requires" && item.sourceFeatureId === feature.id)) {
         if (configuration.effectiveSelectedFeatureIds.includes(constraint.targetFeatureId)) continue;
         const target = project.features.find((item) => item.id === constraint.targetFeatureId);
-        if (window.confirm(`${feature.name} requires ${target?.name ?? constraint.targetFeatureId}. Select it now?`)) {
-          if (window.confirm(`Should ${target?.name ?? constraint.targetFeatureId} be a manual selection?\n\nOK = manual, Cancel = automatic for this approval.`)) manual.push(constraint.targetFeatureId);
+        if (await confirm(`${feature.name} requires ${target?.name ?? constraint.targetFeatureId}. Select it now?`, { confirmLabel: "Select" })) {
+          if (await confirm(`Should ${target?.name ?? constraint.targetFeatureId} be a manual selection?`, { confirmLabel: "Manual", cancelLabel: "Automatic" })) manual.push(constraint.targetFeatureId);
           else automatic.push(constraint.targetFeatureId);
         }
       }
@@ -362,16 +366,16 @@ function Configurator({ configurationId, setConfigurationId }: { configurationId
     }
     update(configuration.id, { manuallySelectedFeatureIds: [...new Set(manual)], automaticConstraintFeatureIds: [...new Set(automatic)], validationStatus: "notValidated", updatedAt: new Date().toISOString() });
   };
-  const runDerivation = () => {
+  const runDerivation = async () => {
     if (!configuration) return;
     const status = derivationStatus(project, configuration);
-    if (status === "Current") return window.alert("The 150% → 100% transformation has already been performed for the current model revision. The existing realization is unchanged.");
-    if (status === "Stale" && !window.confirm("The existing 100% realization is stale. Rederive it from the current 150% model?")) return;
+    if (status === "Current") return void alertUser("The 150% → 100% transformation has already been performed for the current model revision. The existing realization is unchanged.");
+    if (status === "Stale" && !(await confirm("The existing 100% realization is stale. Rederive it from the current 150% model?", { confirmLabel: "Rederive" }))) return;
     const warnings = findings.filter((finding) => finding.severity !== "error");
-    if (findings.some((finding) => finding.severity === "error")) return window.alert("Derivation is blocked. Validate and correct the listed errors.");
-    if (warnings.length && !window.confirm(`Acknowledge ${warnings.length} non-blocking finding(s) before derivation?\n\n${warnings.map((finding) => `${finding.ruleId}: ${finding.message}`).join("\n")}`)) return;
+    if (findings.some((finding) => finding.severity === "error")) return void alertUser("Derivation is blocked. Validate and correct the listed errors.");
+    if (warnings.length && !(await confirm(`Acknowledge ${warnings.length} non-blocking finding(s) before derivation?\n\n${warnings.map((finding) => `${finding.ruleId}: ${finding.message}`).join("\n")}`, { confirmLabel: "Acknowledge" }))) return;
     const errors = derive(configuration.id);
-    if (errors.length) window.alert(errors.join("\n"));
+    if (errors.length) void alertUser(errors.join("\n"));
     else setVariabilityTab("100% Realization");
   };
   const setFeatureValue = (feature: Feature, value: string) => {
@@ -399,10 +403,10 @@ function Configurator({ configurationId, setConfigurationId }: { configurationId
       <div className="mt-3 grid gap-2"><button className="btn btn-primary" onClick={() => setConfigurationDraft(newConfiguration())}>New configuration</button>{configuration && <><button className="btn" disabled={Boolean(configuration.archivedAt)} onClick={() => setConfigurationDraft(structuredClone(configuration))}>Edit configuration</button><button className="btn" onClick={() => {
         const copy = { ...structuredClone(configuration), id: uid("configuration"), architectureId: "", name: `${configuration.name} — Copy`, derivation: undefined, archivedAt: undefined, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
         add(copy); setConfigurationId(copy.id);
-      }}>Duplicate configuration</button>{!configuration.archivedAt && <><button className="btn" onClick={() => update(configuration.id, { manuallySelectedFeatureIds: [], automaticConstraintFeatureIds: [], featureValues: {}, validationStatus: "notValidated" })}>Reset selection</button><button className="btn btn-danger" onClick={() => {
+      }}>Duplicate configuration</button>{!configuration.archivedAt && <><button className="btn" onClick={() => update(configuration.id, { manuallySelectedFeatureIds: [], automaticConstraintFeatureIds: [], featureValues: {}, validationStatus: "notValidated" })}>Reset selection</button><button className="btn btn-danger" onClick={async () => {
         const hasHistory = project.simulationRuns.some((run) => run.configurationId === configuration.id);
         const action = hasHistory ? "archive it and its generated architecture" : "permanently delete it and its generated architecture";
-        if (window.confirm(`${configuration.name} has ${hasHistory ? "historical simulation runs" : "no historical simulation runs"}. This will ${action}. Continue?`)) {
+        if (await confirm(`${configuration.name} has ${hasHistory ? "historical simulation runs" : "no historical simulation runs"}. This will ${action}. Continue?`, { confirmLabel: "Continue", tone: "danger" })) {
           remove(configuration.id);
           setConfigurationId("");
         }
@@ -440,10 +444,10 @@ function Configurator({ configurationId, setConfigurationId }: { configurationId
       if (project.configurations.some((candidate) => candidate.id === next.id)) update(next.id, next);
       else { add(next); setConfigurationId(next.id); }
       setConfigurationDraft(null);
-    }} onDelete={project.configurations.some((candidate) => candidate.id === configurationDraft.id) ? () => {
+    }} onDelete={project.configurations.some((candidate) => candidate.id === configurationDraft.id) ? async () => {
       const hasHistory = project.simulationRuns.some((run) => run.configurationId === configurationDraft.id);
       const action = hasHistory ? "archive it and its generated architecture" : "permanently delete it and its generated architecture";
-      if (window.confirm(`${configurationDraft.name} has ${hasHistory ? "historical simulation runs" : "no historical simulation runs"}. This will ${action}. Continue?`)) {
+      if (await confirm(`${configurationDraft.name} has ${hasHistory ? "historical simulation runs" : "no historical simulation runs"}. This will ${action}. Continue?`, { confirmLabel: "Continue", tone: "danger" })) {
         remove(configurationDraft.id);
         setConfigurationId("");
       }
@@ -453,27 +457,28 @@ function Configurator({ configurationId, setConfigurationId }: { configurationId
 }
 
 function TransformationButton({ configuration }: { configuration?: Configuration }) {
+  const { confirm, alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const derive = useAppStore((state) => state.deriveConfigurationById);
   const setTab = useAppStore((state) => state.setVariabilityTab);
-  const transform = () => {
+  const transform = async () => {
     if (!configuration) return;
     const status = derivationStatus(project, configuration);
     if (status === "Current") {
-      window.alert("The 150% → 100% transformation has already been performed for the current model revision. The existing result remains unchanged.");
+      void alertUser("The 150% → 100% transformation has already been performed for the current model revision. The existing result remains unchanged.");
       return;
     }
-    if (status === "Stale" && !window.confirm("The existing 100% realization is stale. Rederive it from the current 150% model?")) return;
+    if (status === "Stale" && !(await confirm("The existing 100% realization is stale. Rederive it from the current 150% model?", { confirmLabel: "Rederive" }))) return;
     const findings = validateConfiguration(project, configuration);
     const errors = findings.filter((finding) => finding.severity === "error");
     if (errors.length) {
-      window.alert(`Transformation is blocked:\n\n${errors.map((finding) => `${finding.ruleId}: ${finding.message}`).join("\n")}`);
+      void alertUser(`Transformation is blocked:\n\n${errors.map((finding) => `${finding.ruleId}: ${finding.message}`).join("\n")}`);
       return;
     }
     const warnings = findings.filter((finding) => finding.severity !== "error");
-    if (warnings.length && !window.confirm(`Acknowledge ${warnings.length} non-blocking finding(s) before transformation?\n\n${warnings.map((finding) => `${finding.ruleId}: ${finding.message}`).join("\n")}`)) return;
+    if (warnings.length && !(await confirm(`Acknowledge ${warnings.length} non-blocking finding(s) before transformation?\n\n${warnings.map((finding) => `${finding.ruleId}: ${finding.message}`).join("\n")}`, { confirmLabel: "Acknowledge" }))) return;
     const derivationErrors = derive(configuration.id);
-    if (derivationErrors.length) window.alert(derivationErrors.join("\n"));
+    if (derivationErrors.length) void alertUser(derivationErrors.join("\n"));
     else setTab("100% Realization");
   };
   return <button className="btn btn-primary" disabled={!configuration || Boolean(configuration.archivedAt)} onClick={transform}>Transform 150% → 100%</button>;
@@ -484,6 +489,7 @@ function StatusLegend() {
 }
 
 function PreviewModel({ configuration }: { configuration?: Configuration }) {
+  const { confirm } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addElement = useAppStore((state) => state.addElement);
   const addFeature = useAppStore((state) => state.addFeature);
@@ -575,8 +581,8 @@ function PreviewModel({ configuration }: { configuration?: Configuration }) {
       else addVariationPoint(variationPoint);
       setVariationDraft(null);
       return null;
-    }} onDelete={project.variationPoints.some((candidate) => candidate.id === variationDraft.id) ? () => {
-      if (window.confirm(`Delete “${variationDraft.name}”?`)) deleteVariationPoint(variationDraft.id);
+    }} onDelete={project.variationPoints.some((candidate) => candidate.id === variationDraft.id) ? async () => {
+      if (await confirm(`Delete "${variationDraft.name}"?`, { confirmLabel: "Delete", tone: "danger" })) deleteVariationPoint(variationDraft.id);
       setVariationDraft(null);
     } : undefined} />}
     {chooser.length > 0 && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4"><section className="w-full max-w-lg rounded-xl bg-white p-4 shadow-2xl"><h3 className="font-bold">Choose variation point to edit</h3><div className="mt-3 space-y-2">{chooser.map((variationPoint) => <button className="btn w-full justify-start" key={variationPoint.id} onClick={() => { setVariationDraft(structuredClone(variationPoint)); setChooser([]); }}>{variationPoint.name} · {variationPoint.kind}</button>)}</div><button className="btn mt-3 w-full" onClick={() => setChooser([])}>Cancel</button></section></div>}

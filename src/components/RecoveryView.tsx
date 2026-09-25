@@ -1,10 +1,12 @@
 import { AlertTriangle, Download, RotateCcw } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 export function RecoveryView() {
   const raw = useAppStore((state) => state.corruptRaw);
   const error = useAppStore((state) => state.recoveryError);
   const recover = useAppStore((state) => state.recoverFromCorruptStorage);
+  const { confirm } = useDialogs();
   if (raw === undefined) return null;
   const download = () => {
     const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }));
@@ -23,8 +25,8 @@ export function RecoveryView() {
         <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{error}</p>
         <div className="mt-6 flex gap-3">
           <button className="btn" onClick={download}><Download size={16} /> Download raw stored value</button>
-          <button className="btn btn-primary" onClick={() => {
-            if (window.confirm("Reset local data and load the editable sample project? The corrupt value will be removed.")) recover();
+          <button className="btn btn-primary" onClick={async () => {
+            if (await confirm("Reset local data and load the editable sample project? The corrupt value will be removed.", { confirmLabel: "Reset", tone: "danger" })) recover();
           }}><RotateCcw size={16} /> Reset to sample</button>
         </div>
       </section>

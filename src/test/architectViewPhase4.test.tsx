@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ArchitectView } from "../components/ArchitectView";
+import { DialogProvider } from "../components/dialogs/DialogProvider";
 import { createCoffeeMachineSampleProject } from "../data/sample";
 import { applyArchitectAnswer, buildArchitectQuestions, projectedArchitectValue } from "../domain/architectView";
 import type { ModelElement, PersistedAppState } from "../domain/types";
@@ -60,7 +61,7 @@ describe("Architect view Phase 4 delivery hardening", () => {
     const migrated = migratePersistedState(persisted(project)).projects[0];
     expect(migrated.architectSession?.answers["AV-A02"].generatedElementIds).toEqual([]);
     useAppStore.setState({ projects: [migrated], activeProjectId: migrated.id });
-    render(<ArchitectView />);
+    render(<DialogProvider><ArchitectView /></DialogProvider>);
     expect(screen.getByRole("heading", { name: "What is the Aim of this Project?" })).toBeInTheDocument();
   });
 
@@ -141,7 +142,7 @@ describe("Architect view Phase 4 delivery hardening", () => {
     const project = createCoffeeMachineSampleProject();
     project.architectSession = undefined;
     useAppStore.setState({ projects: [project], activeProjectId: project.id });
-    render(<ArchitectView />);
+    render(<DialogProvider><ArchitectView /></DialogProvider>);
     const skip = screen.getByRole("button", { name: "Skip" });
     expect(skip).toHaveTextContent(/^Skip$/);
     expect(screen.queryByText(/second|timer|countdown/i)).not.toBeInTheDocument();

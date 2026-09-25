@@ -27,6 +27,7 @@ import {
   TradeStudyFraming
 } from "./TradeStudyPanels";
 import { TradeStudyOntologyView } from "./TradeStudyOntologyView";
+import { useDialogs } from "./dialogs/DialogProvider";
 import {
   ExpertTradeStudyEvidence,
   ManagerTradeStudySummary,
@@ -45,6 +46,7 @@ const format = (value: number | null | undefined, unit = "") =>
   typeof value === "number" && Number.isFinite(value) ? `${value.toFixed(2)}${unit ? ` ${unit}` : ""}` : "Missing";
 
 export function ComparisonWorkspace() {
+  const { confirm } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addStudy = useAppStore((state) => state.addComparisonStudy);
   const duplicateStudy = useAppStore((state) => state.duplicateComparisonStudy);
@@ -138,8 +140,8 @@ export function ComparisonWorkspace() {
         {!project.comparisonStudies.length && <p className="mt-4 text-sm text-slate-500">Create a Trade Study to begin.</p>}
         {study && <div className="mt-4 flex flex-wrap gap-2">
           <button className="btn" onClick={() => duplicateStudy(study.id)}><Copy size={14} /> Duplicate</button>
-          <button className="btn btn-danger" onClick={() => {
-            if (!window.confirm(`Delete “${study.name}” and its risks?`)) return;
+          <button className="btn btn-danger" onClick={async () => {
+            if (!(await confirm(`Delete "${study.name}" and its risks?`, { confirmLabel: "Delete", tone: "danger" }))) return;
             const error = deleteStudy(study.id);
             if (error) setMessages([error]);
             else setStudyId(project.comparisonStudies.find((candidate) => candidate.id !== study.id)?.id ?? "");
@@ -422,6 +424,7 @@ function RiskEditor({ risk, alternatives, onUpdate, onDuplicate, onDelete }: { r
 }
 
 function Sensitivity({ study }: { study: ComparisonStudy }) {
+  const { alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const execute = useAppStore((state) => state.executeSensitivity);
   const [activeKpiId, setActiveKpiId] = useState(study.selectedKpiIds[0] ?? "");
@@ -433,7 +436,7 @@ function Sensitivity({ study }: { study: ComparisonStudy }) {
   })) ?? [];
   return <section className="card p-5"><div className="flex flex-wrap items-center gap-3"><div><h2 className="text-lg font-bold">Fixed-value weight sensitivity</h2><p className="text-sm text-slate-500">One-factor-at-a-time study-weight variation from 0% to 200% in 25% increments; fixed stakeholder value functions remain unchanged.</p></div><button className="btn btn-primary ml-auto" onClick={() => {
     const errors = execute(study.id);
-    if (errors.length) window.alert(errors.join("\n"));
+    if (errors.length) void alertUser(errors.join("\n"));
   }}><Play size={14} /> Run sensitivity</button></div>
     {result ? <><label className="mt-4 block max-w-xs"><span className="label">Varied KPI</span><select className="field" value={series?.kpiId ?? ""} onChange={(event) => setActiveKpiId(event.target.value)}>{result.series.map((candidate) => <option key={candidate.kpiId} value={candidate.kpiId}>{project.kpis.find((kpi) => kpi.id === candidate.kpiId)?.name ?? candidate.kpiId}</option>)}</select></label>
       <div className="mt-4 h-80" role="img" aria-label="Weight sensitivity score line chart"><ResponsiveContainer><LineChart data={data}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="multiplier" label={{ value: "Raw weight multiplier (%)", position: "insideBottom", offset: -2 }} /><YAxis domain={[0, 100]} /><Tooltip /><Legend />{study.alternativeRefs.map((alternative, index) => <Line type="monotone" key={alternative.id} dataKey={alternative.id} name={alternative.label} stroke={palette[index]} connectNulls={false} />)}</LineChart></ResponsiveContainer></div>
@@ -474,6 +477,7 @@ function DecisionLog({ study }: { study: ComparisonStudy }) {
 }
 
 function DecisionEditor({ decision, onUpdate, onConfirm, onDuplicate, onDelete }: { decision: Decision; onUpdate: (id: string, patch: Partial<Decision>) => string | null; onConfirm: (id: string, alternative: string) => string | null; onDuplicate: (id: string) => void; onDelete: (id: string) => void }) {
+  const { confirm } = useDialogs();
   const [message, setMessage] = useState("");
   const save = (patch: Partial<Decision>) => {
     const error = onUpdate(decision.id, patch);
@@ -492,7 +496,7 @@ function DecisionEditor({ decision, onUpdate, onConfirm, onDuplicate, onDelete }
     </div>
     <dl className="mt-4 grid grid-cols-[170px_1fr] gap-2 text-sm"><dt className="font-semibold">Supporting studies</dt><dd>{decision.supportingComparisonStudyIds.join(", ") || "None"}</dd><dt className="font-semibold">Supporting runs</dt><dd>{decision.supportingSimulationRunIds.join(", ") || "None"}</dd><dt className="font-semibold">Risks</dt><dd>{decision.risks.join(", ") || "None"}</dd><dt className="font-semibold">Open actions</dt><dd>{decision.openActions.join(" ") || "None"}</dd><dt className="font-semibold">Decision snapshot</dt><dd>{decision.evidenceSnapshot ? `${decision.evidenceSnapshot.capturedAt} · revision ${decision.evidenceSnapshot.projectModelRevision} · ${decision.evidenceSnapshot.simulationRunIds.length} immutable runs` : "Captured when created from a Trade Study and refreshed only by explicit approval."}</dd></dl>
     {message && <p className="mt-3 text-sm text-red-700" role="alert">{message}</p>}
-    <div className="mt-4 flex flex-wrap gap-2">{decision.selectedAlternative && decision.status === "draft" && <button className="btn btn-primary" onClick={() => setMessage(onConfirm(decision.id, decision.selectedAlternative!) ?? "")}><Save size={14} /> Confirm selection as proposed</button>}<button className="btn" onClick={() => onDuplicate(decision.id)}><Copy size={14} /> Duplicate</button><button className="btn btn-danger" onClick={() => window.confirm("Delete this formal decision?") && onDelete(decision.id)}><Trash2 size={14} /> Delete</button></div>
+    <div className="mt-4 flex flex-wrap gap-2">{decision.selectedAlternative && decision.status === "draft" && <button className="btn btn-primary" onClick={() => setMessage(onConfirm(decision.id, decision.selectedAlternative!) ?? "")}><Save size={14} /> Confirm selection as proposed</button>}<button className="btn" onClick={() => onDuplicate(decision.id)}><Copy size={14} /> Duplicate</button><button className="btn btn-danger" onClick={async () => (await confirm("Delete this formal decision?", { confirmLabel: "Delete", tone: "danger" })) && onDelete(decision.id)}><Trash2 size={14} /> Delete</button></div>
   </section>;
 }
 

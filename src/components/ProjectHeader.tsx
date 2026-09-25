@@ -1,6 +1,7 @@
 import { ArrowLeft, ChevronDown, FolderOpen, Menu, MessageSquareText, Plus, Save, Trash2 } from "lucide-react";
 import { ExampleChooser } from "./ExampleChooser";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 export function ProjectHeader({
   perspective,
@@ -15,6 +16,7 @@ export function ProjectHeader({
   navigationControls?: string;
   navigationExpanded?: boolean;
 }) {
+  const { confirm, promptText } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const projects = useAppStore((state) => state.projects);
   const workspace = useAppStore((state) => state.uiPreferences.activeWorkspace);
@@ -63,15 +65,15 @@ export function ProjectHeader({
       <details className="relative">
         <summary className="btn cursor-pointer list-none whitespace-nowrap">Project actions <ChevronDown size={14} /></summary>
         <div className="absolute right-0 z-[80] mt-2 grid w-60 gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-2xl">
-          <button className="btn justify-start" onClick={() => createProject(window.prompt("Project name", "New engineering study") ?? "")}><Plus size={15} />New project</button>
+          <button className="btn justify-start" onClick={async () => createProject((await promptText("Project name", "New engineering study")) ?? "")}><Plus size={15} />New project</button>
           <button className="btn justify-start" onClick={duplicateProject}>Duplicate project</button>
           <button className="btn justify-start border-blue-200 bg-blue-50 text-blue-800" onClick={() => openDelivery("save")}><Save size={15} />Save Project</button>
           <button className="btn justify-start border-purple-200 bg-purple-50 text-purple-800" onClick={() => openDelivery("load")}><FolderOpen size={15} />Load Project</button>
-          <button className="btn btn-danger justify-start" onClick={() => {
-            if (window.confirm(`Delete “${project.name}”? This cannot be undone.`)) deleteProject(project.id);
+          <button className="btn btn-danger justify-start" onClick={async () => {
+            if (await confirm(`Delete "${project.name}"? This cannot be undone.`, { confirmLabel: "Delete", tone: "danger" })) deleteProject(project.id);
           }}><Trash2 size={15} />Delete project</button>
-          <button className="btn btn-danger justify-start" onClick={() => {
-            if (window.confirm("Reset the entire local application? All projects will be removed.")) resetAll("empty");
+          <button className="btn btn-danger justify-start" onClick={async () => {
+            if (await confirm("Reset the entire local application? All projects will be removed.", { confirmLabel: "Reset", tone: "danger" })) resetAll("empty");
           }}>Reset all</button>
         </div>
       </details>

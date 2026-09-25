@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
 import { createCoffeeMachineSampleProject } from "../data/sample";
@@ -166,7 +166,7 @@ describe("Architect feedback regression", () => {
     expect(screen.getByRole("button", { name: "Project units" })).toBeInTheDocument();
   });
 
-  it("loads OHSC from the shared chooser without changing project identity or other projects", () => {
+  it("loads OHSC from the shared chooser without changing project identity or other projects", async () => {
     const store = useAppStore.getState();
     const activeProjectId = store.activeProjectId!;
     store.duplicateProject();
@@ -174,14 +174,16 @@ describe("Architect feedback regression", () => {
     const retainedProjectName = useAppStore.getState().projects.find((project) => project.id === retainedProjectId)!.name;
     useAppStore.getState().switchProject(activeProjectId);
     const snapshotIds = useAppStore.getState().snapshots.map((snapshot) => snapshot.id);
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     render(<App />);
     fireEvent.click(screen.getByText("Project actions"));
     fireEvent.click(screen.getByRole("button", { name: "Load example" }));
     const chooser = screen.getByRole("dialog", { name: "Load an example" });
     expect(within(chooser).getByRole("button", { name: /Coffee-machine product line/ })).toBeInTheDocument();
     fireEvent.click(within(chooser).getByRole("button", { name: /Aircraft OHSC product family/ }));
+    const replaceDialog = screen.getByRole("dialog", { name: "Confirm" });
+    expect(replaceDialog).toHaveTextContent(/Aircraft OHSC product family/);
+    fireEvent.click(within(replaceDialog).getByRole("button", { name: "Replace" }));
+    await waitFor(() => expect(useAppStore.getState().projects.find((project) => project.id === activeProjectId)?.name).toBe("Aircraft OHSC Product Family"));
 
     const state = useAppStore.getState();
     const loaded = state.projects.find((project) => project.id === state.activeProjectId)!;
@@ -191,8 +193,6 @@ describe("Architect feedback regression", () => {
     expect(architectReadiness(loaded).status).toBe("ready");
     expect(state.projects.find((project) => project.id === retainedProjectId)?.name).toBe(retainedProjectName);
     expect(state.snapshots.map((snapshot) => snapshot.id)).toEqual(snapshotIds);
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Aircraft OHSC product family"));
-    confirm.mockRestore();
   }, 20_000);
 
   it("exposes project management controls in the Architect header", () => {

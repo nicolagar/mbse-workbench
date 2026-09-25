@@ -28,9 +28,11 @@ import { RequirementsValidationOverview } from "./StakeholderTraceabilityRecap";
 import { TraceabilityMatrix } from "./TraceabilityMatrix";
 import { ValidationPanel } from "./ValidationPanel";
 import { UnitCatalogueDialog } from "./UnitCatalogueDialog";
+import { useDialogs } from "./dialogs/DialogProvider";
 import { SectionRecap } from "./SectionRecap";
 
 export function ModelWorkspace() {
+  const { confirm } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const activeTab = useAppStore((state) => state.uiPreferences.activeModelTab);
   const view = useAppStore((state) => state.uiPreferences.activeModelView);
@@ -203,10 +205,10 @@ export function ModelWorkspace() {
       <div>
         <div className="min-w-0 space-y-4">
           {effectiveView === "table" && <>
-            <ElementTable elements={filtered} onSelect={selectElement} onDuplicate={duplicateElement} onDelete={(element) => {
+            <ElementTable elements={filtered} onSelect={selectElement} onDuplicate={duplicateElement} onDelete={async (element) => {
               const storedCount = project.relationships.filter((relationship) => relationship.sourceId === element.id || relationship.targetId === element.id).length;
               const referenceCount = contextConnections(project).filter((relationship) => relationship.sourceId === element.id || relationship.targetId === element.id).length;
-              if (window.confirm(`Delete “${element.name}”? ${storedCount} relationships and ${referenceCount} typed context references will also be removed.`)) deleteElement(element.id);
+              if (await confirm(`Delete "${element.name}"? ${storedCount} relationships and ${referenceCount} typed context references will also be removed.`, { confirmLabel: "Delete", tone: "danger" })) deleteElement(element.id);
             }} />
             <section className="card overflow-hidden"><button className="flex w-full items-center gap-2 p-4 text-left font-bold" aria-expanded={relationshipEditorOpen} onClick={() => setRelationshipEditorOpen((open) => !open)}>{relationshipEditorOpen ? <ChevronDown size={17} /> : <ChevronRight size={17} />}Relationship editor<span className="ml-auto text-xs font-normal text-slate-500">{relationshipEditorOpen ? "Hide" : "Show"}</span></button>{relationshipEditorOpen && <div className="border-t border-slate-200 p-4"><RelationshipManager /></div>}</section>
           </>}

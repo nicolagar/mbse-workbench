@@ -46,14 +46,15 @@ describe("application shell", () => {
     await waitFor(() => expect(scrollTo).toHaveBeenCalled());
   });
 
-  it("creates, switches, duplicates and deletes named projects from the compact frame", () => {
-    vi.spyOn(window, "prompt").mockReturnValue("Scope review project");
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+  it("creates, switches, duplicates and deletes named projects from the compact frame", async () => {
     render(<App />);
     const originalId = useAppStore.getState().activeProjectId!;
     fireEvent.click(screen.getByText("Project actions"));
     fireEvent.click(screen.getByRole("button", { name: "New project" }));
-    expect(screen.getByText("Scope review project", { selector: "h1" })).toBeInTheDocument();
+    const nameDialog = screen.getByRole("dialog", { name: "Enter a value" });
+    fireEvent.change(within(nameDialog).getByRole("textbox"), { target: { value: "Scope review project" } });
+    fireEvent.click(within(nameDialog).getByRole("button", { name: "OK" }));
+    await waitFor(() => expect(screen.getByText("Scope review project", { selector: "h1" })).toBeInTheDocument());
     expect(useAppStore.getState().projects).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: "Duplicate project" }));
     expect(useAppStore.getState().projects).toHaveLength(3);
@@ -61,7 +62,9 @@ describe("application shell", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Switch active project" }), { target: { value: originalId } });
     expect(useAppStore.getState().activeProjectId).toBe(originalId);
     fireEvent.click(screen.getByRole("button", { name: "Delete project" }));
-    expect(useAppStore.getState().projects).toHaveLength(2);
+    const deleteDialog = screen.getByRole("dialog", { name: "Confirm" });
+    fireEvent.click(within(deleteDialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(useAppStore.getState().projects).toHaveLength(2));
     expect(useAppStore.getState().projects.some((project) => project.id === originalId)).toBe(false);
   });
 
@@ -291,14 +294,13 @@ describe("application shell", () => {
     expect(screen.getByText("Read-only run history")).toBeInTheDocument();
   });
 
-  it("runs architecture-and-simulation scope without requiring a configuration", () => {
+  it("runs architecture-and-simulation scope without requiring a configuration", async () => {
     const active = useAppStore.getState().projects[0];
     const totalMass = active.kpis.find((kpi) => kpi.standardAlgorithmKey === "totalMass")!;
     useAppStore.setState({
       projects: [{ ...active, overallScope: "architectureAndSimulation", configurations: [], kpis: [totalMass] }],
       uiPreferences: { ...useAppStore.getState().uiPreferences, activePerspective: "modeler", activeWorkspace: "simulation" }
     });
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     const before = useAppStore.getState().projects[0].simulationRuns.length;
     render(<App />);
 
@@ -306,8 +308,12 @@ describe("application shell", () => {
     expect(screen.getByRole("radio", { name: "Current architecture · no configuration required" })).toBeChecked();
     expect(screen.queryByRole("option", { name: "Select a configuration" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Validate and run" }));
+    await waitFor(() => {
+      const acknowledgeButton = screen.queryByRole("button", { name: "Acknowledge" });
+      if (acknowledgeButton) fireEvent.click(acknowledgeButton);
+      expect(useAppStore.getState().projects[0].simulationRuns).toHaveLength(before + 1);
+    });
     const runs = useAppStore.getState().projects[0].simulationRuns;
-    expect(runs).toHaveLength(before + 1);
     expect(runs.at(-1)?.configurationId).toBeUndefined();
     expect(runs.at(-1)?.results).toContainEqual(expect.objectContaining({ name: totalMass.name, value: expect.any(Number) }));
     expect(screen.queryByText(/Select an active saved configuration/)).not.toBeInTheDocument();

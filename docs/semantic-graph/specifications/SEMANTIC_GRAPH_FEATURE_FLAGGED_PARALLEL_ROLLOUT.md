@@ -102,4 +102,4 @@ Rollback is flag-only. No persisted data must require downgrade. If any beta vie
 
 ## Acceptance evidence
 
-Create `ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md` with baseline commit, flag matrix, automated results, Coffee/OHSC parity, intentional differences, browser checks, persistence byte checks and final go/no-go decision.
+Create `internal/ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md` with baseline commit, flag matrix, automated results, Coffee/OHSC parity, intentional differences, browser checks, persistence byte checks and final go/no-go decision.

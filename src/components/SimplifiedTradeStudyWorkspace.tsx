@@ -21,6 +21,7 @@ import { validateConfiguration } from "../domain/variability";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { KpiFormulaBuilder } from "./KpiFormulaBuilder";
 import { UnitCatalogueDialog } from "./UnitCatalogueDialog";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 type TradeTab = "setup" | "compare" | "decision";
 
@@ -66,6 +67,7 @@ function compatibleCurrentRun(project: NonNullable<ReturnType<typeof selectActiv
 }
 
 export function SimplifiedTradeStudyWorkspace() {
+  const { confirm } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addStudy = useAppStore((state) => state.addComparisonStudy);
   const updateStudy = useAppStore((state) => state.updateComparisonStudy);
@@ -149,8 +151,8 @@ export function SimplifiedTradeStudyWorkspace() {
         <div className="flex items-center justify-between"><h2 className="font-bold">Trade Studies</h2><button className="btn" onClick={create}><Plus size={14} /> New</button></div>
         <label className="mt-3 block"><span className="label">Active Trade Study</span><select className="field" value={study?.id ?? ""} onChange={(event) => { setStudyId(event.target.value); setActiveComparisonStudy(event.target.value || undefined); }}>{project.comparisonStudies.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
         <div className="mt-3 space-y-2">{project.comparisonStudies.map((item) => <button key={item.id} onClick={() => { setStudyId(item.id); setActiveComparisonStudy(item.id); }} className={`w-full rounded-lg border p-3 text-left ${study?.id === item.id ? "border-purple-300 bg-purple-50" : "border-slate-200"}`}><strong className="block text-sm">{item.name}</strong><span className="text-xs text-slate-500">{item.alternativeRefs.length} alternatives · {item.results.length} results</span></button>)}</div>
-        {study && <div className="mt-4 flex flex-wrap gap-2"><button className="btn" onClick={() => duplicateStudy(study.id)}><Copy size={14} /> Duplicate</button><button className="btn btn-danger" onClick={() => {
-          if (!window.confirm(`Delete “${study.name}”?`)) return;
+        {study && <div className="mt-4 flex flex-wrap gap-2"><button className="btn" onClick={() => duplicateStudy(study.id)}><Copy size={14} /> Duplicate</button><button className="btn btn-danger" onClick={async () => {
+          if (!(await confirm(`Delete "${study.name}"?`, { confirmLabel: "Delete", tone: "danger" }))) return;
           const error = deleteStudy(study.id);
           if (error) setMessages([error]);
           else setStudyId(project.comparisonStudies.find((item) => item.id !== study.id)?.id ?? "");
@@ -185,6 +187,7 @@ function StepTab({ active, label, onClick }: { active: boolean; label: string; o
 }
 
 function StudySetup({ study, update }: { study: ComparisonStudy; update: (id: string, patch: Partial<ComparisonStudy>, calculationAffecting?: boolean) => void }) {
+  const { confirm } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addFeature = useAppStore((state) => state.addFeature);
   const updateFeature = useAppStore((state) => state.updateFeature);
@@ -320,7 +323,7 @@ function StudySetup({ study, update }: { study: ComparisonStudy; update: (id: st
       {rootFeatures.length === 0 ? <div className="mt-4 flex max-w-2xl gap-2"><input className="field" value={rootName} onChange={(event) => setRootName(event.target.value)} placeholder="Root Feature name" /><button className="btn btn-primary" onClick={createRoot}>Create Root Feature</button></div> : rootFeatures.length > 1 ? <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">Resolve the feature model to exactly one Root Feature.</p> : <div className="mt-4 grid max-w-2xl grid-cols-[1fr_auto] gap-2"><input className="field" value={root!.name} onChange={(event) => updateFeature(root!.id, { name: event.target.value })} /><button className="btn" onClick={() => update(study.id, { rootFeatureId: root!.id }, true)}>{study.rootFeatureId === root!.id ? "Root linked" : "Link shared Root"}</button></div>}
       <div className="mt-5 grid grid-cols-[1fr_1fr_auto] gap-2 max-md:grid-cols-1"><input className="field" value={axisName} onChange={(event) => setAxisName(event.target.value)} placeholder="Variation axis name" /><input className="field" value={axisDescription} onChange={(event) => setAxisDescription(event.target.value)} placeholder="What design choice varies?" /><button className="btn btn-primary" disabled={!root || !axisName.trim()} onClick={() => createAxis()}>Add axis</button></div>
       {adoptableGroups.length > 0 && <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3"><div className="text-sm font-semibold text-amber-900">Existing FeatureGroups available for adoption</div><div className="mt-2 flex flex-wrap gap-2">{adoptableGroups.map((group) => <button className="btn bg-white" key={group.id} onClick={() => createAxis(group.id)}>Adopt {group.name}</button>)}</div></div>}
-      <div className="mt-4 space-y-2">{project.variabilityAxes.map((axis) => <article className={`rounded-lg border p-3 ${selectedAxisIds.includes(axis.id) ? "border-purple-300 bg-purple-50" : "border-slate-200"}`} key={axis.id}><div className="flex flex-wrap items-center gap-2"><input type="checkbox" checked={selectedAxisIds.includes(axis.id)} onChange={(event) => update(study.id, { rootFeatureId: root?.id, selectedVariabilityAxisIds: uniqueToggle(selectedAxisIds, axis.id, event.target.checked) }, true)} /><input className="field min-w-52 flex-1" defaultValue={axis.name} onBlur={(event) => setMessage(updateVariabilityAxis(axis.id, { name: event.target.value }) ?? "Axis and FeatureGroup synchronized.")} /><input className="field min-w-72 flex-[2]" defaultValue={axis.description} onBlur={(event) => setMessage(updateVariabilityAxis(axis.id, { description: event.target.value }) ?? "Axis description saved.")} /><button className="btn btn-danger" onClick={() => { if (window.confirm(`Delete axis “${axis.name}”?`)) setMessage(deleteVariabilityAxis(axis.id) ?? "Axis and empty FeatureGroup deleted."); }}><Trash2 size={14} /></button></div><div className="mt-1 text-xs text-slate-500">Linked FeatureGroup: {project.featureGroups.find((group) => group.id === axis.featureGroupId)?.name ?? "Missing"}</div></article>)}</div>
+      <div className="mt-4 space-y-2">{project.variabilityAxes.map((axis) => <article className={`rounded-lg border p-3 ${selectedAxisIds.includes(axis.id) ? "border-purple-300 bg-purple-50" : "border-slate-200"}`} key={axis.id}><div className="flex flex-wrap items-center gap-2"><input type="checkbox" checked={selectedAxisIds.includes(axis.id)} onChange={(event) => update(study.id, { rootFeatureId: root?.id, selectedVariabilityAxisIds: uniqueToggle(selectedAxisIds, axis.id, event.target.checked) }, true)} /><input className="field min-w-52 flex-1" defaultValue={axis.name} onBlur={(event) => setMessage(updateVariabilityAxis(axis.id, { name: event.target.value }) ?? "Axis and FeatureGroup synchronized.")} /><input className="field min-w-72 flex-[2]" defaultValue={axis.description} onBlur={(event) => setMessage(updateVariabilityAxis(axis.id, { description: event.target.value }) ?? "Axis description saved.")} /><button className="btn btn-danger" onClick={async () => { if (await confirm(`Delete axis "${axis.name}"?`, { confirmLabel: "Delete", tone: "danger" })) setMessage(deleteVariabilityAxis(axis.id) ?? "Axis and empty FeatureGroup deleted."); }}><Trash2 size={14} /></button></div><div className="mt-1 text-xs text-slate-500">Linked FeatureGroup: {project.featureGroups.find((group) => group.id === axis.featureGroupId)?.name ?? "Missing"}</div></article>)}</div>
     </section>
     <section className="card p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Evaluation KPIs</h2><p className="mt-1 text-sm text-slate-600">Create reusable KPI definitions and select only KPIs that measure an objective in the active Trade Study scope.</p></div><button className="btn" onClick={() => setUnitDialogOpen(true)}><Ruler size={16} /> Project units</button></div>
       <div className="mt-4 rounded-xl border border-slate-200 p-4"><h3 className="font-bold">Create and select KPI</h3>

@@ -2,7 +2,7 @@ services:
   - type: web
     name: mbse-mbple-workbench
     runtime: static
-    branch: 02_Rework_fix_v01
+    branch: main
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     autoDeployTrigger: commit

@@ -7,6 +7,7 @@ import type { FunctionSequence, FunctionSequenceDomain, GraphLayoutMode, ModelEl
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { ModelGraph } from "./ModelGraph";
 import { AllSequencesOverview } from "./AllSequencesOverview";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 export function FunctionSequencePanel({
   domain,
@@ -21,6 +22,7 @@ export function FunctionSequencePanel({
   onLayoutModeChange: (mode: GraphLayoutMode) => void;
   scopedElementIds: Set<string>;
 }) {
+  const { confirm, alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addSequence = useAppStore((state) => state.addFunctionSequence);
   const updateSequence = useAppStore((state) => state.updateFunctionSequence);
@@ -77,9 +79,9 @@ export function FunctionSequencePanel({
     onLayoutModeChange("sequence");
   };
 
-  const changeUseCase = (useCaseId: string) => {
+  const changeUseCase = async (useCaseId: string) => {
     if (!selected) return;
-    if ((selected.functionIds.length || sequenceRelationships.length) && !window.confirm("Changing the use case removes the current sequence functions and connectors. Continue?")) return;
+    if ((selected.functionIds.length || sequenceRelationships.length) && !(await confirm("Changing the use case removes the current sequence functions and connectors. Continue?"))) return;
     updateSequence(selected.id, { useCaseIds: useCaseId ? [useCaseId] : [], functionIds: [], relationshipIds: [] });
     setSourceId("");
     setTargetId("");
@@ -98,7 +100,7 @@ export function FunctionSequencePanel({
       createdAt: now,
       updatedAt: now
     });
-    if (error) window.alert(error);
+    if (error) void alertUser(error);
     else {
       setSourceId("");
       setTargetId("");
@@ -132,8 +134,8 @@ export function FunctionSequencePanel({
         <div className="flex flex-wrap items-end gap-3">
           <label className="min-w-72 flex-1"><span className="label">Named sequence</span><select className="field" value={selected.id} onChange={(event) => setSelectedId(event.target.value)}>{sequences.map((sequence) => <option value={sequence.id} key={sequence.id}>{sequence.name}</option>)}</select></label>
           <button className="btn" onClick={createSequence}><Plus size={15} /> Create sequence</button>
-          <button className="btn btn-danger" onClick={() => {
-            if (window.confirm(`Delete “${selected.name}” and its precedence links?`)) {
+          <button className="btn btn-danger" onClick={async () => {
+            if (await confirm(`Delete "${selected.name}" and its precedence links?`, { confirmLabel: "Delete", tone: "danger" })) {
               deleteSequence(selected.id);
               setSelectedId(sequences.find((sequence) => sequence.id !== selected.id)?.id ?? "");
             }
@@ -182,6 +184,7 @@ export function FunctionSequencePanel({
 }
 
 function ProcessItemFlowEditor({ functionIds }: { functionIds: string[] }) {
+  const { alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const addRelationship = useAppStore((state) => state.addRelationship);
   const [flowFunctionId, setFlowFunctionId] = useState("");
@@ -220,7 +223,7 @@ function ProcessItemFlowEditor({ functionIds }: { functionIds: string[] }) {
       createdAt: now,
       updatedAt: now
     });
-    if (error) window.alert(error);
+    if (error) void alertUser(error);
     else {
       setFlowProductId("");
       setFlowName("");
@@ -260,6 +263,7 @@ function ProcessItemFlowEditor({ functionIds }: { functionIds: string[] }) {
 }
 
 function ProcessItemFlowRow({ relationship }: { relationship: Relationship }) {
+  const { alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const updateRelationship = useAppStore((state) => state.updateRelationship);
   const deleteRelationship = useAppStore((state) => state.deleteRelationship);
@@ -273,7 +277,7 @@ function ProcessItemFlowRow({ relationship }: { relationship: Relationship }) {
       unit: unit.trim(),
       itemFlowName: itemFlowName.trim() || undefined
     });
-    if (error) window.alert(error);
+    if (error) void alertUser(error);
   };
   return (
     <tr>

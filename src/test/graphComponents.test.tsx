@@ -2,6 +2,7 @@ import { ReactFlow } from "@xyflow/react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FeatureGraph } from "../components/FeatureGraph";
+import { DialogProvider } from "../components/dialogs/DialogProvider";
 import { ModelGraphNode, type MeasuredGraphNodeData } from "../components/MeasuredGraphNodes";
 import { TradeStudyOntologyView } from "../components/TradeStudyOntologyView";
 import { useAppStore } from "../store/useAppStore";
@@ -10,7 +11,7 @@ describe("measured semantic graph components", () => {
   beforeEach(() => useAppStore.getState().resetEntireApplication());
 
   it("renders the Feature Model through dedicated measured nodes and explicit ports", async () => {
-    render(<FeatureGraph readOnly />);
+    render(<DialogProvider><FeatureGraph readOnly /></DialogProvider>);
 
     expect(screen.getByLabelText("Feature model graph")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Feature graph layout" })).toHaveValue("automatic");

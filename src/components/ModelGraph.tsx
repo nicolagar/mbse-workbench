@@ -22,6 +22,7 @@ import { useNodeMeasurements } from "../hooks/useNodeMeasurements";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { graphPortId, ModelGraphNode, type MeasuredGraphNodeData } from "./MeasuredGraphNodes";
 import { RoutedEdge, type RoutedEdgeData } from "./RoutedEdge";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 type GraphDensity = "compact" | "detailed";
 type RelationshipView = "structure" | "all" | "selection";
@@ -86,6 +87,7 @@ export function ModelGraph({
   onRelationshipDoubleClick?: (relationshipId: string) => void;
   onConnectionRequest?: (connection: Connection, allowedTypes: RelationshipType[]) => void;
 }) {
+  const { alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const selectElement = useAppStore((state) => state.selectElement);
   const selectedElementId = useAppStore((state) => state.selectedElementId);
@@ -344,7 +346,7 @@ export function ModelGraph({
       createdAt: now,
       updatedAt: now
     });
-    if (error) window.alert(error);
+    if (error) void alertUser(error);
     setPendingConnection(null);
   };
 
@@ -356,7 +358,7 @@ export function ModelGraph({
     if (sequence) {
       const expected = sequence.domain === "product" ? "productFunction" : "processFunction";
       if (source.elementType !== expected || target.elementType !== expected) {
-        window.alert(`Sequence links must connect two ${elementTypeLabels[expected]} elements.`);
+        void alertUser(`Sequence links must connect two ${elementTypeLabels[expected]} elements.`);
         return;
       }
       createConnection(connection, "precedes");
@@ -364,7 +366,7 @@ export function ModelGraph({
     }
     const types = compatibleRelationshipTypes(source.elementType, target.elementType).filter((type) => type !== "precedes");
     if (!types.length) {
-      window.alert(`${elementTypeLabels[source.elementType]} cannot be connected to ${elementTypeLabels[target.elementType]}.`);
+      void alertUser(`${elementTypeLabels[source.elementType]} cannot be connected to ${elementTypeLabels[target.elementType]}.`);
     } else if (onConnectionRequest) {
       onConnectionRequest(connection, types);
     } else if (types.length === 1) {
@@ -455,6 +457,7 @@ export function ModelGraph({
 }
 
 function GraphRelationshipEditor({ relationship, onClose }: { relationship: Relationship; onClose: () => void }) {
+  const { confirm, alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const updateRelationship = useAppStore((state) => state.updateRelationship);
   const deleteRelationship = useAppStore((state) => state.deleteRelationship);
@@ -494,10 +497,10 @@ function GraphRelationshipEditor({ relationship, onClose }: { relationship: Rela
             unit: hasQuantity ? unit || undefined : undefined,
             description: description || undefined
           });
-          if (error) window.alert(error);
+          if (error) void alertUser(error);
         }}><Save size={14} /> Save</button>
-        <button className="btn btn-danger" onClick={() => {
-          if (window.confirm("Delete this relationship?")) {
+        <button className="btn btn-danger" onClick={async () => {
+          if (await confirm("Delete this relationship?", { confirmLabel: "Delete", tone: "danger" })) {
             deleteRelationship(relationship.id);
             onClose();
           }

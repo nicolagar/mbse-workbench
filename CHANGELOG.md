@@ -1,3 +1,11 @@
+## Repository hygiene and in-app dialogs — 2026-09-25
+
+- Pointed `render.yaml` at `main` instead of a stale feature branch, and added title, description, favicon and Open Graph/Twitter share metadata to `index.html`.
+- Moved internal acceptance records, manual acceptance checklists, superseded specifications and the original build prompts into `internal/`, updated every cross-reference, and removed the 19 empty `t.txt` directory placeholders.
+- Regenerated the three static guide PDFs' cover and appended Architect/Modeler handbook from the current app version and schema; `scripts/build_static_guides.py` now reads those values live instead of a hardcoded label and is idempotent on repeated runs.
+- Replaced every `window.confirm`/`window.prompt`/`window.alert` call (101 sites across 17 components) with an in-app, accessible `DialogProvider` (`src/components/dialogs/DialogProvider.tsx`), so confirmation, prompt and notice dialogs render as part of the application UI instead of native browser popups.
+- Added a repository `.gitignore` (`node_modules/`, `dist/`, `tmp/`, `output/`, build caches).
+
 ## V04 semantic ontology — 2026-09-16
 
 - Add a typed, deterministic semantic graph over existing records and frozen evidence, with provenance, role filtering, conservative reference resolution and export.
@@ -9,7 +17,7 @@
 - Remove Project Digital Thread, Ontology Schema, Stored schema graph/register and Semantic view controls from the Scope Ontology page.
 - Add parallel Trade Study and Architect views, a read-only matrix, and a Modeler trace inspector inside Element details.
 - Preserve schema 14 and every existing domain/store/sample module; keep every stored/legacy view reachable.
-- Add source-isolation, determinism, history, parity, failure, UI and performance checks. Details: `ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md`.
+- Add source-isolation, determinism, history, parity, failure, UI and performance checks. Details: `internal/ACCEPTANCE_RESULTS_SEMANTIC_GRAPH.md`.
 
 # Changelog
 
@@ -60,7 +68,7 @@
 - Completed the coffee example with one operational product use case, coherent interface ownership, realistic variant inputs, current derivations/runs and an evidence-backed feasible baseline decision.
 - Completed the OHSC external aircraft context and internal product/process interface links while preserving all 30 baseline requirements and the required mass/eligibility outcomes.
 - Hardened configuration-aware requirement evaluation, formula-result units, containment migration and validation of system/external-system context.
-- Added automated connected-model and rendered relationship regression checks plus a senior-review acceptance record in `ONTOLOGY_REVIEW.md`.
+- Added automated connected-model and rendered relationship regression checks plus a senior-review acceptance record in `internal/ONTOLOGY_REVIEW.md`.
 
 ## 1.6.0 — 2026-09-10
 
@@ -124,7 +132,7 @@
 - Corrected the coffee-machine sample so product functions are realized by coffee-machine technical components, manufacturing process functions are realized by industrial equipment, and process handoffs consume/produce product components explicitly.
 - Removed the desktop-only minimum width and made dense Model, Variability, Parameters, Simulation, relationship, and sequence layouts collapse at appropriate laptop, tablet, and phone breakpoints.
 - Added focused regression coverage for sample semantics, handoff validation, Save/Load entry points, and expandable direct workflow navigation.
-- Reconciled persistence documentation with schema 9 and recorded the available automated/browser verification evidence in `ACCEPTANCE_RESULTS_POST_FIX_V01.md`.
+- Reconciled persistence documentation with schema 9 and recorded the available automated/browser verification evidence in `internal/ACCEPTANCE_RESULTS_POST_FIX_V01.md`.
 
 ## 1.5.1 — 2026-08-12
 

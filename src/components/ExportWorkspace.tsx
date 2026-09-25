@@ -7,6 +7,7 @@ import { sourceProjectSnapshots } from "../domain/snapshots";
 import { elementTypeLabels, elementTypes, relationshipTypes } from "../domain/types";
 import { xlsxBlob } from "../domain/xlsxExport";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 const tabs = ["Save / Load Project", "Snapshots", "Selective Export", "PDF Report", "Demo Checklist"] as const;
 type Tab = typeof tabs[number];
@@ -73,6 +74,7 @@ function ProjectSaveLoad() {
 }
 
 function SnapshotsPanel() {
+  const { confirm } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const snapshots = useAppStore((state) => state.snapshots);
   const create = useAppStore((state) => state.createSnapshot);
@@ -83,22 +85,22 @@ function SnapshotsPanel() {
   const [note, setNote] = useState("");
   const [message, setMessage] = useState("");
   const list = sourceProjectSnapshots(snapshots, project.id);
-  const submit = () => {
+  const submit = async () => {
     let error = create(name, note);
-    if (error?.startsWith("PMC-112") && window.confirm(`${error}\n\nReplace the oldest snapshot?`)) error = create(name, note, true);
+    if (error?.startsWith("PMC-112") && (await confirm(`${error}\n\nReplace the oldest snapshot?`, { confirmLabel: "Replace" }))) error = create(name, note, true);
     setMessage(error ?? "Snapshot created.");
     if (!error) { setName(""); setNote(""); }
   };
   return <div className="grid grid-cols-[360px_1fr] gap-4 max-lg:grid-cols-1">
     <section className="card p-5"><h2 className="text-lg font-bold">Create named snapshot</h2><p className="mt-1 text-sm text-slate-500">Basic local snapshots — not enterprise version control.</p><label className="mt-4 block"><span className="label">Required name</span><input className="field" value={name} onChange={(event) => setName(event.target.value)} /></label><label className="mt-3 block"><span className="label">Optional note</span><textarea className="field" value={note} onChange={(event) => setNote(event.target.value)} /></label><button className="btn btn-primary mt-4" disabled={!name.trim()} onClick={submit}><Plus size={14} /> Create snapshot</button>{message && <p aria-live="polite" className={`mt-3 text-sm ${message.includes("created") ? "text-green-700" : "text-amber-800"}`}>{message}</p>}</section>
-    <section className="card p-5"><div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Application-level snapshots</h2><p className="text-sm text-slate-500">{list.length}/20 for this source project · newest first</p></div></div><div className="mt-4 space-y-3">{list.map((snapshot) => <article className="rounded-lg border p-4" key={snapshot.id}><div className="flex flex-wrap items-start gap-3"><div className="min-w-0 flex-1"><h3 className="font-bold">{snapshot.name}</h3><p className="text-sm text-slate-600">{snapshot.note || "No note."}</p><p className="mt-1 text-xs text-slate-500">{new Date(snapshot.createdAt).toLocaleString()} · schema {snapshot.schemaVersion} · {snapshot.projectName}</p></div><button className="btn" onClick={() => {
-          if (!window.confirm(`Restore “${snapshot.name}”? A safety snapshot will be created first.`)) return;
+    <section className="card p-5"><div className="flex items-center justify-between"><div><h2 className="text-lg font-bold">Application-level snapshots</h2><p className="text-sm text-slate-500">{list.length}/20 for this source project · newest first</p></div></div><div className="mt-4 space-y-3">{list.map((snapshot) => <article className="rounded-lg border p-4" key={snapshot.id}><div className="flex flex-wrap items-start gap-3"><div className="min-w-0 flex-1"><h3 className="font-bold">{snapshot.name}</h3><p className="text-sm text-slate-600">{snapshot.note || "No note."}</p><p className="mt-1 text-xs text-slate-500">{new Date(snapshot.createdAt).toLocaleString()} · schema {snapshot.schemaVersion} · {snapshot.projectName}</p></div><button className="btn" onClick={async () => {
+          if (!(await confirm(`Restore "${snapshot.name}"? A safety snapshot will be created first.`, { confirmLabel: "Restore" }))) return;
           let error = restore(snapshot.id);
-          if (error?.startsWith("PMC-112") && window.confirm(`${error}\n\nReplace the oldest snapshot?`)) {
+          if (error?.startsWith("PMC-112") && (await confirm(`${error}\n\nReplace the oldest snapshot?`, { confirmLabel: "Replace" }))) {
             error = restore(snapshot.id, true);
           }
           setMessage(error ?? "PMC-203: Safety snapshot created and project restored.");
-        }}><RotateCcw size={14} /> Restore</button><button className="btn" onClick={() => setMessage(duplicate(snapshot.id) ?? "Snapshot duplicated as a new project.")}>Duplicate as project</button><button className="btn" onClick={() => downloadBlob(`${safeName(snapshot.name)}.json`, snapshot.projectData, "application/json")}><Download size={14} /> Raw</button><button aria-label={`Delete snapshot ${snapshot.name}`} className="btn btn-danger" onClick={() => window.confirm(`Delete snapshot “${snapshot.name}”?`) && remove(snapshot.id)}><Trash2 size={14} /></button></div></article>)}</div>{!list.length && <p className="py-10 text-center text-sm text-slate-500">No snapshots for this project.</p>}</section>
+        }}><RotateCcw size={14} /> Restore</button><button className="btn" onClick={() => setMessage(duplicate(snapshot.id) ?? "Snapshot duplicated as a new project.")}>Duplicate as project</button><button className="btn" onClick={() => downloadBlob(`${safeName(snapshot.name)}.json`, snapshot.projectData, "application/json")}><Download size={14} /> Raw</button><button aria-label={`Delete snapshot ${snapshot.name}`} className="btn btn-danger" onClick={async () => (await confirm(`Delete snapshot "${snapshot.name}"?`, { confirmLabel: "Delete", tone: "danger" })) && remove(snapshot.id)}><Trash2 size={14} /></button></div></article>)}</div>{!list.length && <p className="py-10 text-center text-sm text-slate-500">No snapshots for this project.</p>}</section>
   </div>;
 }
 
@@ -158,6 +160,7 @@ function SelectiveExport() {
 }
 
 function JsonImport() {
+  const { confirm } = useDialogs();
   const importPackage = useAppStore((state) => state.importProjectPackage);
   const project = useAppStore(selectActiveProject)!;
   const snapshots = useAppStore((state) => state.snapshots);
@@ -165,14 +168,14 @@ function JsonImport() {
   const [fileName, setFileName] = useState("");
   const [mode, setMode] = useState<"new" | "replace">("new");
   const [messages, setMessages] = useState<string[]>([]);
-  const execute = () => {
+  const execute = async () => {
     let replaceOldestSnapshot = false;
     if (mode === "replace") {
       const atLimit = sourceProjectSnapshots(snapshots, project.id).length >= 20;
-      const prompt = atLimit
+      const message = atLimit
         ? "Replace only the active project? A safety snapshot will replace the oldest existing snapshot because the 20-snapshot limit has been reached."
         : "Replace only the active project? A safety snapshot will be created first.";
-      if (!window.confirm(prompt)) return;
+      if (!(await confirm(message, { confirmLabel: "Replace" }))) return;
       replaceOldestSnapshot = atLimit;
     }
     const result = importPackage(raw, mode, replaceOldestSnapshot);

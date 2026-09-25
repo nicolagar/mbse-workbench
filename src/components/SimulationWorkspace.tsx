@@ -5,6 +5,7 @@ import { derivationStatus } from "../domain/derivation";
 import { defaultSimulationName, simulationStatus, type SimulationRequest } from "../domain/simulation";
 import type { StandardAlgorithmKey } from "../domain/types";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
+import { useDialogs } from "./dialogs/DialogProvider";
 
 const directAlgorithms: StandardAlgorithmKey[] = [
   "totalMass", "directElementCost", "processCost", "estimatedTotalCost", "totalPower",
@@ -12,6 +13,7 @@ const directAlgorithms: StandardAlgorithmKey[] = [
 ];
 
 export function SimulationWorkspace() {
+  const { confirm } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const execute = useAppStore((state) => state.executeSimulation);
   const activeConfigurations = project.configurations.filter((configuration) => !configuration.archivedAt);
@@ -41,12 +43,12 @@ export function SimulationWorkspace() {
       : [])
   ], [project, configurationId, mode]);
 
-  const run = () => {
+  const run = async () => {
     if ((mode === "configured" && !configurationId) || (mode === "architectureOnly" && !architectureId)) {
       setMessages([mode === "configured" ? "Select a configuration." : "Select an architecture."]);
       return;
     }
-    if (warningSummary.length && !window.confirm(`Acknowledge the following non-blocking warnings before simulation?\n\n${warningSummary.join("\n")}`)) return;
+    if (warningSummary.length && !(await confirm(`Acknowledge the following non-blocking warnings before simulation?\n\n${warningSummary.join("\n")}`, { confirmLabel: "Acknowledge" }))) return;
     const request: SimulationRequest = {
       name,
       mode,
@@ -64,7 +66,7 @@ export function SimulationWorkspace() {
       setMessages([]);
       return;
     } else if (attempt.run && attempt.warnings.length) {
-      if (!window.confirm(`Acknowledge calculation warnings before saving this run?\n\n${attempt.warnings.join("\n")}`)) return;
+      if (!(await confirm(`Acknowledge calculation warnings before saving this run?\n\n${attempt.warnings.join("\n")}`, { confirmLabel: "Acknowledge" }))) return;
       const acknowledged = execute(request, true);
       if (acknowledged.run) {
         setSelectedRunId(acknowledged.run.id);

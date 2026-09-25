@@ -5,6 +5,7 @@ import { ProjectRecapWorkspace } from "../components/ProjectRecapWorkspace";
 import { SectionRecap } from "../components/SectionRecap";
 import { TraceabilityMatrix } from "../components/TraceabilityMatrix";
 import { VariabilityWorkspace } from "../components/VariabilityWorkspace";
+import { DialogProvider } from "../components/dialogs/DialogProvider";
 import { createCoffeeMachineSampleProject } from "../data/sample";
 import { createColdChainSimulationExample, createEmergencyLightingExample } from "../data/scopeExamples";
 import { contextConnections } from "../domain/contextConnections";
@@ -29,12 +30,12 @@ describe("version 1.8 usability feedback", () => {
   it("filters a sticky traceability matrix by element stereotype and connected relationship type", () => {
     const project = createCoffeeMachineSampleProject();
     useAppStore.setState({ projects: [project], activeProjectId: project.id });
-    render(<TraceabilityMatrix
+    render(<DialogProvider><TraceabilityMatrix
       elements={project.elements}
       relationships={project.relationships}
       contextRelationships={contextConnections(project)}
       columnTypes={["systemRequirement", "productFunction"]}
-    />);
+    /></DialogProvider>);
     const table = screen.getByRole("table", { name: "Editable traceability matrix" });
     const processFunctionCount = project.elements.filter((element) => element.elementType === "processFunction").length;
     fireEvent.change(screen.getByLabelText("Filter selected elements"), { target: { value: "Process Function" } });
@@ -64,7 +65,7 @@ describe("version 1.8 usability feedback", () => {
     const project = createCoffeeMachineSampleProject();
     useAppStore.setState({ projects: [project], activeProjectId: project.id, selectedConfigurationId: project.configurations[0].id });
     useAppStore.getState().setVariabilityTab("Configurator");
-    render(<VariabilityWorkspace />);
+    render(<DialogProvider><VariabilityWorkspace /></DialogProvider>);
     expect(screen.getByRole("heading", { name: "Feature selection hierarchy" })).toBeInTheDocument();
     expect(screen.getAllByText("Choose exactly one (XOR)").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Coffee input system").length).toBeGreaterThan(0);
@@ -84,7 +85,7 @@ describe("version 1.8 usability feedback", () => {
     coffee.architectSession!.completedAt = undefined;
     coffee.architectSession!.currentQuestionKey = Object.keys(coffee.architectSession!.answers).at(-1);
     useAppStore.setState({ projects: [coffee], activeProjectId: coffee.id });
-    render(<ArchitectView />);
+    render(<DialogProvider><ArchitectView /></DialogProvider>);
     expect(screen.getByRole("heading", { name: "Model created so far" })).toBeInTheDocument();
     expect(screen.getByText(/semantic left-to-right digital thread/)).toBeInTheDocument();
     expect(screen.queryByLabelText("Graph card detail")).not.toBeInTheDocument();
