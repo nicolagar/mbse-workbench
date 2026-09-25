@@ -1,0 +1,604 @@
+# MBPLE Variation-Point Logic
+
+The application implements four variation-point kinds from the No Magic/Cameo MBPLE methodology:
+
+1. Existence
+2. Primitive Property
+3. Primitive Tag
+4. Element Property
+
+The methodology also defines **Element Tag**, but REV03 does not implement it. The official methodology uses variation points to connect feature choices to variable locations in the 150% system model and then transform it into a configuration-specific 100% model. [No Magic: defining a system model using variation points](https://docs.nomagic.com/spaces/PLE2021x/pages/64973711/Defining%2Bsystem%2Bmodel%2Busing%2Bvariation%2Bpoints)
+
+## Origin classification
+
+The classifications used below are:
+
+- **Methodology** — directly corresponds to a documented MBPLE concept.
+- **Adapted** — implements a methodology concept using a simplified, safe browser representation.
+- **Workbench-specific** — added for this application; not defined as such by the cited methodology.
+
+# 1. Inputs common to every variation-point kind
+
+| Input | Possible value | Meaning | Origin |
+|---|---|---|---|
+| Variation-point name | Any non-empty text | Human-readable identification | Workbench-specific/general model metadata |
+| Kind | `existence`, `primitiveProperty`, `primitiveTag`, `elementProperty` | Selects the effect applied to the model | Methodology |
+| Target type | `element` or `relationship` | Whether the variation affects a node or connector | Adapted |
+| Target IDs | One or more IDs, comma-separated | Model content constrained by the variation point | Methodology concept; ID entry and multi-target UI are workbench-specific |
+| Feature expression | Feature IDs with `AND`, `OR`, `NOT`, parentheses, or blank | Controls when the variation point is active | Adapted |
+| Typed conditions | `feature-id=value` or `feature-id!=value`, comma-separated | Tests exact Boolean or enumeration values | Workbench-specific safe representation |
+| Realization domain | One of six domains or blank | Limits the variation point to a realization domain | Workbench-specific |
+| Enabled | Enabled or disabled | Allows temporarily ignoring the variation point without deleting it | Workbench-specific |
+
+## Name
+
+Example:
+
+```text
+Milk-frother existence
+```
+
+The name does not affect calculation. It is used in the variation-point list, validation messages and realization audit.
+
+## Kind
+
+The user must enter exactly one of:
+
+```text
+existence
+primitiveProperty
+primitiveTag
+elementProperty
+```
+
+The text is case-sensitive in the current prompt.
+
+## Target type
+
+Possible inputs:
+
+```text
+element
+relationship
+```
+
+An element could be a requirement, function, component, process, resource or verification element.
+
+A relationship is a connector such as:
+
+- `satisfiedBy`
+- `realizedBy`
+- `connects`
+- `precedes`
+- `requiresResource`
+- `consumes`
+- `produces`
+
+The underlying project data structure can store element and relationship target lists, but the current creation dialog asks the user to choose one target type. It does not allow mixing elements and relationships in one newly created variation point.
+
+## Target IDs
+
+Example with one target:
+
+```text
+process-automatic-brewing
+```
+
+Example with multiple targets:
+
+```text
+process-grind, process-brew, process-clean
+```
+
+At least one target is required.
+
+The No Magic methodology associates the variation point with the affected model element. In Cameo, this is normally done by selecting the model element and creating a variation point on it. Manual entry of IDs is a workbench-specific interface choice.
+
+Double-clicking an element or connector in the graph automatically preselects the corresponding target, avoiding manual ID entry.
+
+## Feature expression
+
+Supported inputs include:
+
+```text
+feature-milk
+```
+
+```text
+feature-milk AND feature-automatic-cleaning
+```
+
+```text
+feature-standard OR feature-deluxe
+```
+
+```text
+feature-deluxe AND NOT feature-us-market
+```
+
+```text
+(feature-europe OR feature-us) AND feature-deluxe
+```
+
+Rules:
+
+- Use exact feature IDs, not feature names.
+- Operators are `AND`, `OR` and `NOT`.
+- Operators are case-insensitive.
+- Parentheses are supported.
+- Precedence is `NOT`, then `AND`, then `OR`.
+- Unknown feature IDs and malformed expressions generate validation errors.
+- Arbitrary JavaScript, Python or other scripts cannot be entered.
+
+### Important difference from Cameo
+
+The methodology defines a Boolean variation expression and allows supported scripting languages. It can also infer an expression from separately defined Feature Impacts when the expression is blank.
+
+REV03 deliberately does not execute scripts. It uses a safe Boolean parser.
+
+In REV03:
+
+```text
+blank feature expression = true
+```
+
+Therefore, blank means “always active.” This is not exactly the same as Cameo’s expression-inference behavior because the workbench has no separate Feature Impacts list from which to infer `X AND Y AND Z`.
+
+## Typed feature-value conditions
+
+Possible formats:
+
+```text
+feature-id=value
+```
+
+```text
+feature-id!=value
+```
+
+Examples:
+
+```text
+feature-voltage=400V
+```
+
+```text
+feature-market!=US
+```
+
+```text
+feature-automated=true
+```
+
+Multiple conditions are comma-separated:
+
+```text
+feature-voltage=400V, feature-market!=US
+```
+
+All comma-separated conditions must be true. They are implicitly connected with `AND`.
+
+The complete activation condition is:
+
+```text
+feature expression
+AND condition 1
+AND condition 2
+AND ...
+```
+
+Accepted value interpretation:
+
+| Input | Interpreted as |
+|---|---|
+| `true` | Boolean true |
+| `false` | Boolean false |
+| `25` | Number 25 |
+| `2.5` | Number 2.5 |
+| `400V` | String `"400V"` |
+| `Deluxe` | String `"Deluxe"` |
+
+For an enumeration feature, the value must match one of the feature’s declared allowed values. For a Boolean feature, the value must be `true` or `false`.
+
+The methodology supports Boolean and enumeration feature values. The separate comma-separated `feature-id=value` notation is a workbench-specific safe implementation.
+
+## Realization domain
+
+Permitted inputs are:
+
+```text
+requirements
+structure
+behavior
+process
+resources
+verification
+```
+
+Or blank.
+
+Only one domain can be entered per variation point.
+
+| Domain | Typical content |
+|---|---|
+| `requirements` | Needs and system requirements |
+| `structure` | Components, interfaces and structural connections |
+| `behavior` | Product functions and behavioral relations |
+| `process` | Manufacturing functions and process order |
+| `resources` | People, machines, tools and resource requirements |
+| `verification` | Verification methods and evidence |
+
+This field interacts with the realization-scope selection in the Configurator:
+
+- If the configuration uses **Entire compatible model**, every enabled variation point is evaluated.
+- If the configuration selects particular domains, a scoped variation point is evaluated only if its domain was selected.
+- An unscoped variation point—blank domain—is always evaluated.
+- An out-of-scope variation point is ignored; its target remains unchanged.
+
+The six-domain scope mechanism is a workbench-specific addition. It is not an input described for a variation point on the cited No Magic documentation page.
+
+# 2. Existence variation point
+
+## Purpose
+
+Controls whether an element or relationship exists in the realized 100% model.
+
+This is directly from the methodology and is described as the most frequently used variation-point kind.
+
+## User inputs
+
+| Input | Required? | Effect |
+|---|---:|---|
+| Name | Yes | Identifies the variation point |
+| Kind | Yes: `existence` | Selects existence behavior |
+| Target type | Yes | Element or relationship |
+| Target IDs | Yes | Content that may be retained or removed |
+| Feature expression | No | Selection condition; blank means true |
+| Typed conditions | No | Additional value checks |
+| Realization domain | No | Limits where the variation applies |
+
+Existence does not ask for:
+
+- Property path
+- Value rules
+- Realized value
+
+## Result
+
+When the variation point is applicable:
+
+| Condition | Result |
+|---|---|
+| True | Target is retained |
+| False | Target is removed |
+
+If an element is removed, relationships connected to it are also removed through cascade cleanup.
+
+If several active Existence variation points constrain the same target, any false condition removes it. In practice, all applicable existence conditions must pass for the target to remain.
+
+## Example
+
+```text
+Name:
+Milk frother existence
+
+Kind:
+existence
+
+Target type:
+element
+
+Target:
+component-milk-frother
+
+Feature expression:
+feature-milk-option
+
+Typed conditions:
+feature-edition=Deluxe
+
+Domain:
+structure
+```
+
+The component exists only when the Milk Option is active and Edition is `Deluxe`.
+
+# 3. Primitive Property variation point
+
+## Purpose
+
+Changes a scalar property that contains text, a number or a Boolean value.
+
+This kind comes directly from the methodology. The exact property paths and permitted fields are specific to the workbench data model.
+
+## Additional required inputs
+
+A Primitive Property variation point adds:
+
+1. Safe property path
+2. One or more ordered value rules
+
+## Element property paths
+
+| Property path | Target value | Intended input |
+|---|---|---|
+| `name` | Element name | Text |
+| `description` | Element description | Text |
+| `status` | Lifecycle status | `draft`, `reviewed`, or `approved` |
+| `metadata:duration` | Process duration | Number |
+| `metadata:capacity` | Resource capacity | Number |
+| `metadata:capacityHours` | Available capacity hours | Number |
+| `metadata:availabilityPercent` | Resource availability | Number |
+| `metadata:hourlyRate` | Resource hourly rate | Number |
+| `parameter:<parameter-id>:value` | Value of an owned parameter | Number, text, Boolean or null according to the parameter |
+
+Example:
+
+```text
+metadata:duration
+```
+
+Example targeting a parameter:
+
+```text
+parameter:param-heater-power:value
+```
+
+The parameter ID must belong to every constrained element.
+
+## Relationship property paths
+
+| Property path | Intended input |
+|---|---|
+| `name` | Text |
+| `description` | Text |
+| `requiredQuantity` | Number |
+| `quantity` | Number |
+| `unit` | Text |
+| `itemFlowName` | Text |
+
+Typical use:
+
+- `requiredQuantity` for a `requiresResource` relationship
+- `quantity` and `unit` for material flow
+- `itemFlowName` for `consumes` or `produces`
+
+## Value rules
+
+Every modification variation point requires at least one value rule.
+
+Each rule has:
+
+| Rule input | Meaning |
+|---|---|
+| Rule feature expression | Feature-selection condition for this value |
+| Rule typed conditions | Exact feature-value conditions |
+| Realized value | Value assigned when the rule matches |
+
+Rules are evaluated from top to bottom. The **first matching rule wins**.
+
+Example:
+
+| Order | Rule expression | Typed condition | Result |
+|---:|---|---|---:|
+| 1 | `feature-fast-brew` | `feature-voltage=400V` | `1.5` |
+| 2 | `feature-standard-brew` | blank | `4` |
+| 3 | blank | blank | `5` |
+
+The last blank rule acts as a fallback.
+
+If the outer variation-point condition is true but no value rule matches, the property remains unchanged.
+
+### Accepted realized-value syntax
+
+| User input | Stored value |
+|---|---|
+| `42` | Number |
+| `-3.5` | Number |
+| `true` | Boolean |
+| `false` | Boolean |
+| `null` | Null |
+| `Automatic mode` | String |
+| blank | Empty string |
+| `["tag-a","tag-b"]` | String array |
+
+For Primitive Property, normally use a scalar value, not a string array.
+
+### Current validation limitation
+
+The current editor parses the value but does not fully enforce the data type of every primitive property. For example, it can technically accept text for `metadata:duration`, even though duration should be numeric. That is permissive runtime behavior, not intended MBPLE semantics, and should eventually be replaced by property-aware input controls.
+
+# 4. Primitive Tag variation point
+
+## Purpose
+
+Changes a scalar value defined by an extension/profile tag rather than a standard model property.
+
+This comes directly from the methodology. The workbench maps it to its own tags and custom-attribute structures.
+
+## Supported element paths
+
+| Property path | Meaning | Realized input |
+|---|---|---|
+| `tags` | Complete list of element tags | JSON string array |
+| `customAttribute:<definition-id>` | Value of a defined custom attribute | Text, number, Boolean or null |
+
+Example for a tag list:
+
+```text
+Property path:
+tags
+
+Realized value:
+["deluxe","milk-capable"]
+```
+
+Example for a custom attribute:
+
+```text
+Property path:
+customAttribute:attr-market
+
+Realized value:
+EU
+```
+
+The custom-attribute definition ID must exist.
+
+Primitive Tag is not supported for relationships in REV03.
+
+## Rule inputs
+
+Primitive Tag uses the same ordered rules as Primitive Property:
+
+- Rule feature expression
+- Rule typed conditions
+- Realized value
+- First matching rule wins
+- Blank rule condition provides a fallback
+
+The methodology expects the name of the profile tag and an expression returning its value. The `tags` and `customAttribute:<id>` paths are workbench-specific mappings.
+
+# 5. Element Property variation point
+
+## Purpose
+
+Changes a property whose value is another model element—not a number, Boolean or free text.
+
+This is directly from the methodology. In UML/SysML, examples include changing a property’s type or selecting another model element as a default value.
+
+REV03 implements a limited, safe subset based on IDs.
+
+## Supported element paths
+
+| Target | Property path | Required realized value |
+|---|---|---|
+| Element | `architectureId` | Existing architecture ID |
+
+Example:
+
+```text
+Property path:
+architectureId
+
+Realized value:
+architecture-deluxe
+```
+
+## Supported relationship paths
+
+| Property path | Effect | Required realized value |
+|---|---|---|
+| `sourceId` | Retargets the connector source | Existing compatible element ID |
+| `targetId` | Retargets the connector destination | Existing compatible element ID |
+| `architectureId` | Changes architecture association | Existing architecture ID |
+
+Example:
+
+```text
+Property path:
+targetId
+```
+
+Rule values:
+
+```text
+component-230v-adapter
+```
+
+or:
+
+```text
+component-400v-adapter
+```
+
+The value must be entered as a bare model ID. Numbers, Booleans, null and arrays are rejected.
+
+## Ordered condition-value rules
+
+This directly reflects the methodology’s concept of condition-value pairs, simplified into an ordered list.
+
+Example:
+
+| Order | Typed condition | Element value |
+|---:|---|---|
+| 1 | `feature-voltage=230V` | `component-230v-adapter` |
+| 2 | `feature-voltage=400V` | `component-400v-adapter` |
+
+The first matching condition determines the referenced element.
+
+REV03 does not provide unrestricted UML property selection. Only the whitelisted ID-based paths above are supported.
+
+# 6. Inputs managed automatically
+
+The variation-point record contains additional properties that users do not directly enter in the current editor:
+
+| Field | Behavior | Origin |
+|---|---|---|
+| Variation-point ID | Generated automatically | Workbench-specific persistence |
+| Description | Blank in the full dialog or generated by quick creation | Workbench-specific |
+| Value-rule ID | Generated automatically | Workbench-specific |
+| Created timestamp | Generated automatically | Workbench-specific |
+| Updated timestamp | Updated automatically | Workbench-specific |
+| Applied-variation audit | Created during realization | Workbench-specific traceability |
+| Previous and next values | Captured during realization | Workbench-specific traceability |
+
+# 7. Different creation routes
+
+## Full Variation Points editor
+
+The **Add Variation Point** button asks for the complete definition:
+
+1. Name
+2. Kind
+3. Target type
+4. Target IDs
+5. Feature expression
+6. Typed conditions
+7. Property path, when applicable
+8. Realization domain
+9. Initial value-rule expression, when applicable
+10. Initial value-rule typed conditions
+11. Realized value
+
+## Graph interaction
+
+- Double-click element body → presets **Existence**
+- Double-click a displayed parameter → presets **Primitive Property** and its parameter path
+- Double-click displayed duration → presets **Primitive Property** and `metadata:duration`
+- Double-click tags → presets **Primitive Tag** and `tags`
+- Double-click connector → asks between **Existence** and **Primitive Property**
+
+## 150% Preview quick creator
+
+The quick creator asks for fewer inputs:
+
+- Feature expression
+- Name
+- Realized value for modification kinds
+
+It does not initially ask for:
+
+- Typed feature-value conditions
+- Realization domain
+- Full rule structure
+
+Those can be added afterward through the full Variation Points editor.
+
+There is also a current limitation: creating a connector property variation directly from the 150% Preview does not ask for the relationship property path. The resulting definition must be completed through **Variation Points → Edit** before it is valid.
+
+# 8. Methodology elements not implemented
+
+| Methodology capability | REV03 status | Reason |
+|---|---|---|
+| Existence | Implemented | Essential 150% → 100% functionality |
+| Primitive Property | Implemented with whitelist | Safe scalar modification |
+| Primitive Tag | Implemented with whitelist | Supports tags/custom attributes |
+| Element Property | Implemented with limited ID retargeting | Safe reference modification |
+| Element Tag | Not implemented | The project has no element-valued profile-tag model |
+| Arbitrary script expressions | Intentionally excluded | Browser safety and deterministic execution |
+| Automatic blank-expression inference from Feature Impacts | Not implemented | No separate Feature Impacts collection |
+| General UML property/tag discovery | Not implemented | The workbench uses a bounded data model |
+| Replace and Rewire | Not implemented as separate kinds | Limited connector retargeting is available through Element Property |
+
+The official documentation defines the four implemented kinds plus Element Tag and describes Primitive/Element value specifications. [No Magic variation-point kinds](https://docs.nomagic.com/spaces/PLE2021x/pages/64973711/Defining%2Bsystem%2Bmodel%2Busing%2Bvariation%2Bpoints) The overall methodology remains feature model → configuration → variation points in the 150% model → 100% realization. [No Magic MBPLE overview](https://docs.nomagic.com/spaces/PLE2021x/pages/64973700/Model-Based%2BProduct%2BLine%2BEngineering)

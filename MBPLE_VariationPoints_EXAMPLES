@@ -1,0 +1,518 @@
+# MBPLE Variation-Point Examples
+
+Interface-ready examples for the Stage-B industrial sample on branch
+`agent/stage-b-variability-presizing`.
+
+This guide contains three realistic, fully usable examples for each implemented
+modification/value variation-point kind:
+
+3. Primitive Property
+4. Primitive Tag
+5. Element Property
+
+Every example uses features, elements, relationships, parameters, and IDs that
+already exist in the starting sample. No source-code editing or hidden
+custom-attribute ID is required.
+
+## Before creating the examples
+
+1. Start from the industrial sample data.
+2. Open **Variability > Variation Points**.
+3. Use the cross-domain model graph in this page to select the target.
+4. Double-click an element attribute to create a property variation point with
+   its target and property path prefilled.
+5. Double-click a connector, confirm **Property modification**, and complete the
+   full editor for relationship examples.
+6. Create value rules in the order shown. The engine uses first-match behavior,
+   and the interface does not reorder rules. If the order is wrong, delete and
+   recreate the affected rule.
+7. Save a configuration, derive it, and inspect **100% Realization** to verify
+   the result.
+
+The 150% source model remains unchanged. Values are applied only to the
+immutable realized snapshot.
+
+# 3. Primitive Property
+
+Primitive Property changes a scalar value while preserving the target element
+or relationship. Supported examples below use paths that the current interface
+can prefill or accept directly.
+
+## 3.1 Loading duration by loading method
+
+### Purpose
+
+Use one common **Load components** process in every product, but give it a
+variant-specific duration:
+
+- Manual loading: 4 minutes
+- Automated feeding: 1.5 minutes
+
+### Create it through the interface
+
+The starting industrial sample already includes this variation point. Inspect
+and use the existing definition. If you deliberately recreate it for training,
+first disable or delete the existing **Loading duration by automation**
+variation point; two enabled definitions for the same target and property cause
+a conflicting-effects validation error.
+
+1. In the Variation Points graph, find **Load components**.
+2. Double-click its displayed **Duration** attribute, not the body of the node.
+3. Enter the following definition.
+
+| Field | Enter or select |
+|---|---|
+| Name | Loading duration by loading method |
+| Kind | `primitiveProperty` (prefilled) |
+| Target type | `element` (prefilled) |
+| Target | Load components (prefilled) |
+| Feature expression | Leave blank |
+| Typed feature-value conditions | Leave blank |
+| Property path | `metadata:duration` (prefilled) |
+| Realization domain | `process` |
+
+4. Create the first value rule, then add the second.
+
+| Order | Rule feature expression | Typed conditions | Realized value |
+|---:|---|---|---:|
+| 1 | `feature-manual-loading` | Blank | `4` |
+| 2 | `feature-automated-feeding` | Blank | `1.5` |
+
+### Verify
+
+| Configuration | Expected realized result |
+|---|---|
+| Manual Customer Variant | Load components duration = 4 minutes |
+| Automated Customer Variant | Load components duration = 1.5 minutes |
+
+The unit remains `minute`. Only the numeric duration changes. The realized
+duration is available to lead-time and critical-path calculations.
+
+## 3.2 Material-handling throughput by loading method
+
+### Purpose
+
+Use the same **Material handling module** in both products, but realize its
+existing **Throughput** parameter as:
+
+- Manual loading: 12 parts/hour
+- Automated feeding: 30 parts/hour
+
+### Create it through the interface
+
+1. In the Variation Points graph, find **Material handling module**.
+2. Double-click the displayed **Throughput** parameter.
+3. Enter the following definition.
+
+| Field | Enter or select |
+|---|---|
+| Name | Material-handling throughput by loading method |
+| Kind | `primitiveProperty` (prefilled) |
+| Target type | `element` (prefilled) |
+| Target | Material handling module (prefilled) |
+| Feature expression | Leave blank |
+| Typed feature-value conditions | Leave blank |
+| Property path | `parameter:par-productcomponent-material-handling-module-throughput:value` (prefilled) |
+| Realization domain | `structure` |
+
+4. Create the rules in this order.
+
+| Order | Rule feature expression | Typed conditions | Realized value |
+|---:|---|---|---:|
+| 1 | `feature-manual-loading` | Blank | `12` |
+| 2 | `feature-automated-feeding` | Blank | `30` |
+
+### Verify
+
+| Configuration | Expected realized result |
+|---|---|
+| Manual Customer Variant | Throughput = 12 parts/h |
+| Automated Customer Variant | Throughput = 30 parts/h |
+
+The parameter name, unit, semantic key, limits, source, and value origin are
+preserved. Only its value is changed.
+
+## 3.3 Inspection technician demand
+
+### Purpose
+
+Keep the relationship **Inspect assembly requiresResource Quality technician**,
+but vary its required quantity:
+
+- Vision only: 1 technician
+- Dimensional probe only: 1 technician
+- Vision and dimensional probe: 2 technicians
+
+### Create it through the interface
+
+1. In the Variation Points graph, find the connector from **Inspect assembly**
+   to **Quality technician**.
+2. Double-click the connector.
+3. Confirm **Property modification**.
+4. Enter the following definition.
+
+| Field | Enter or select |
+|---|---|
+| Name | Inspection technician demand |
+| Kind | `primitiveProperty` |
+| Target type | `relationship` (prefilled) |
+| Target | Inspect assembly `requiresResource` Quality technician (prefilled) |
+| Feature expression | `feature-vision OR feature-probe` |
+| Typed feature-value conditions | Leave blank |
+| Property path | `requiredQuantity` |
+| Realization domain | `resources` |
+
+5. Create the more specific combined rule first and the blank fallback last.
+
+| Order | Rule feature expression | Typed conditions | Realized value |
+|---:|---|---|---:|
+| 1 | `feature-vision AND feature-probe` | Blank | `2` |
+| 2 | Leave blank | Blank | `1` |
+
+### Verify
+
+| Vision | Probe | Expected realized result |
+|---|---|---|
+| No | No | Variation point inactive; source value remains |
+| Yes | No | Required quantity = 1 person |
+| No | Yes | Required quantity = 1 person |
+| Yes | Yes | Required quantity = 2 persons |
+
+The relationship and its `person` unit remain. Resource-demand and cost
+calculations can consume the realized quantity.
+
+## Primitive Property implementation note
+
+In all three examples:
+
+1. The target remains in the model.
+2. The outer condition decides whether the variation point participates.
+3. Ordered value rules select the new scalar value.
+4. The first matching rule wins.
+5. The original 150% value is not overwritten.
+
+# 4. Primitive Tag
+
+Primitive Tag changes an element's complete tag list. The interface currently
+supports `tags` and `customAttribute:<definition-id>`, but custom-attribute IDs
+are generated and are not exposed in normal UI workflows. Therefore these
+fully interface-usable examples intentionally use only `tags`.
+
+For `tags`, every realized value must be a valid JSON array of strings. The
+array replaces the complete tag list; it does not append one tag. Include every
+tag that must remain.
+
+## 4.1 Inspection-process classification
+
+### Purpose
+
+Classify **Inspect assembly** according to the selected inspection technology.
+
+### Create it through the interface
+
+1. In the Variation Points graph, find **Inspect assembly**.
+2. Double-click its displayed **Tags** attribute.
+3. Enter the following definition.
+
+| Field | Enter or select |
+|---|---|
+| Name | Inspection process classification |
+| Kind | `primitiveTag` (prefilled) |
+| Target type | `element` (prefilled) |
+| Target | Inspect assembly (prefilled) |
+| Feature expression | Leave blank |
+| Typed feature-value conditions | Leave blank |
+| Property path | `tags` (prefilled) |
+| Realization domain | `process` |
+
+4. Create the rules from most specific to least specific.
+
+| Order | Rule feature expression | Typed conditions | Realized value |
+|---:|---|---|---|
+| 1 | `feature-vision AND feature-probe` | Blank | `["processFunction","inspection","vision","dimensional-probe","high-assurance"]` |
+| 2 | `feature-vision` | Blank | `["processFunction","inspection","vision"]` |
+| 3 | `feature-probe` | Blank | `["processFunction","inspection","dimensional-probe"]` |
+
+### Verify
+
+| Selected features | Expected realized tags |
+|---|---|
+| Vision only | processFunction, inspection, vision |
+| Probe only | processFunction, inspection, dimensional-probe |
+| Vision and Probe | processFunction, inspection, vision, dimensional-probe, high-assurance |
+
+The combined rule must be first or a single-feature rule would match before it.
+
+## 4.2 Robotic-cell maintenance classification
+
+### Purpose
+
+Classify **Robotic fastening cell** for preventive maintenance normally and
+predictive maintenance when Advanced Analytics is selected.
+
+### Create it through the interface
+
+1. In the Variation Points graph, find **Robotic fastening cell**.
+2. Double-click its displayed **Tags** attribute.
+3. Enter the following definition.
+
+| Field | Enter or select |
+|---|---|
+| Name | Robotic cell maintenance classification |
+| Kind | `primitiveTag` (prefilled) |
+| Target type | `element` (prefilled) |
+| Target | Robotic fastening cell (prefilled) |
+| Feature expression | `feature-robotic-fastening` |
+| Typed feature-value conditions | Leave blank |
+| Property path | `tags` (prefilled) |
+| Realization domain | `resources` |
+
+4. Create the Advanced Analytics rule first and the fallback second.
+
+| Order | Rule feature expression | Typed conditions | Realized value |
+|---:|---|---|---|
+| 1 | `feature-advanced-analytics` | Blank | `["resource","robotic-fastening","predictive-maintenance","connected"]` |
+| 2 | Leave blank | Blank | `["resource","robotic-fastening","preventive-maintenance"]` |
+
+### Verify
+
+| Configuration | Expected result |
+|---|---|
+| Manual variant | Target is not realized; variation point is inactive |
+| Automated without Advanced Analytics | preventive-maintenance tags |
+| Automated with Advanced Analytics | predictive-maintenance and connected tags |
+
+The outer expression keeps this classification relevant only to variants that
+contain the robotic fastening resource.
+
+## 4.3 Control-data connection classification by voltage
+
+### Purpose
+
+Classify the existing **Control-data connection** with the selected operating
+voltage while retaining its production-data meaning.
+
+This example demonstrates typed feature-value conditions using the existing
+enumeration feature `feature-operating-voltage`.
+
+### Create it through the interface
+
+1. In the Variation Points graph, find **Control-data connection**.
+2. Double-click its displayed **Tags** attribute.
+3. Enter the following definition.
+
+| Field | Enter or select |
+|---|---|
+| Name | Control-data connection voltage classification |
+| Kind | `primitiveTag` (prefilled) |
+| Target type | `element` (prefilled) |
+| Target | Control-data connection (prefilled) |
+| Feature expression | `feature-data-recording OR feature-advanced-analytics` |
+| Typed feature-value conditions | Leave blank |
+| Property path | `tags` (prefilled) |
+| Realization domain | `structure` |
+
+4. Create both value rules. The feature expression is blank in each rule
+   because the distinction is made by the typed condition.
+
+| Order | Rule feature expression | Typed conditions | Realized value |
+|---:|---|---|---|
+| 1 | Leave blank | `feature-operating-voltage=230V` | `["processInterface","control-data","230V","production-data"]` |
+| 2 | Leave blank | `feature-operating-voltage=400V` | `["processInterface","control-data","400V","production-data"]` |
+
+### Verify
+
+| Data feature active | Voltage | Expected result |
+|---|---|---|
+| No | Either | Variation point inactive |
+| Yes | 230V | control-data, 230V, production-data tags |
+| Yes | 400V | control-data, 400V, production-data tags |
+
+Typed conditions are entered as `feature-id=value`; do not add quotes around
+the enumeration value.
+
+# 5. Element Property
+
+Element Property assigns an existing model-element or architecture ID to a
+reference-valued property.
+
+| Target type | Supported property paths |
+|---|---|
+| Element | `architectureId` |
+| Relationship | `sourceId`, `targetId`, `architectureId` |
+
+For `sourceId` and `targetId`, paste an existing model-element ID. For
+`architectureId`, paste an existing architecture ID. The current interface does
+not provide a chooser for the realized reference value, so the paste-ready IDs
+below are essential.
+
+Create these examples from the full **Variability > Variation Points**
+cross-domain graph. Do not use the 150% Preview connector shortcut for these
+examples because that shortcut does not currently collect the Element Property
+path.
+
+## 5.1 Retarget cycle-time analysis to the variant bottleneck
+
+### Purpose
+
+Keep one traceable allocation relationship for **Cycle-time analysis**, but
+change which process it analyzes:
+
+- Manual loading variant: Load components
+- Automated feeding variant: Join components
+
+Both candidate process elements exist in the starting sample and remain common,
+so neither endpoint is removed before retargeting.
+
+### Create it through the interface
+
+1. Find the connector **Cycle-time analysis allocatedTo Load components**.
+2. Double-click the connector and confirm **Property modification**.
+3. Enter the following definition.
+
+| Field | Enter or select |
+|---|---|
+| Name | Cycle-time analysis focus by loading method |
+| Kind | Change to `elementProperty` |
+| Target type | `relationship` (prefilled) |
+| Target | Cycle-time analysis `allocatedTo` Load components (prefilled) |
+| Feature expression | Leave blank |
+| Typed feature-value conditions | Leave blank |
+| Property path | `targetId` |
+| Realization domain | `verification` |
+
+4. Create the rules in this order.
+
+| Order | Rule feature expression | Typed conditions | Realized value ID |
+|---:|---|---|---|
+| 1 | `feature-manual-loading` | Blank | `processFunction-load-components` |
+| 2 | `feature-automated-feeding` | Blank | `processFunction-join-components` |
+
+### Verify
+
+| Configuration | Expected realized connector |
+|---|---|
+| Manual Customer Variant | Cycle-time analysis allocatedTo Load components |
+| Automated Customer Variant | Cycle-time analysis allocatedTo Join components |
+
+The relationship ID remains stable; only `targetId` changes.
+
+## 5.2 Retarget the handling connection to the selected interface
+
+### Purpose
+
+Keep the existing **Handle product connects Product transfer interface**
+relationship, but realize the downstream interface appropriate to the feeding
+concept:
+
+- Manual loading: Product transfer interface
+- Automated feeding: Joining interface
+
+Both interfaces are common elements in the starting 150% model.
+
+### Create it through the interface
+
+1. Find the connector **Handle product connects Product transfer interface**.
+2. Double-click the connector and confirm **Property modification**.
+3. Enter the following definition.
+
+| Field | Enter or select |
+|---|---|
+| Name | Handling connection by feeding concept |
+| Kind | Change to `elementProperty` |
+| Target type | `relationship` (prefilled) |
+| Target | Handle product `connects` Product transfer interface (prefilled) |
+| Feature expression | Leave blank |
+| Typed feature-value conditions | Leave blank |
+| Property path | `targetId` |
+| Realization domain | `structure` |
+
+4. Create the rules.
+
+| Order | Rule feature expression | Typed conditions | Realized value ID |
+|---:|---|---|---|
+| 1 | `feature-manual-loading` | Blank | `productInterface-product-transfer-interface` |
+| 2 | `feature-automated-feeding` | Blank | `productInterface-joining-interface` |
+
+### Verify
+
+| Configuration | Expected realized connector |
+|---|---|
+| Manual Customer Variant | Handle product connects Product transfer interface |
+| Automated Customer Variant | Handle product connects Joining interface |
+
+This preserves one relationship identity while changing the referenced target.
+
+## 5.3 Assign the fastening allocation to the variant architecture
+
+### Purpose
+
+Assign the common **Join components realizedBy Assembly fixture** relationship
+to the architecture that owns the selected fastening concept:
+
+- Manual fastening: Manual architecture
+- Robotic fastening: Automated architecture
+
+The relationship's endpoints do not change. Only its `architectureId` changes.
+The starting feature model treats manual and robotic fastening as alternatives,
+so only one rule should match in a valid configuration.
+
+### Create it through the interface
+
+1. Find the connector **Join components realizedBy Assembly fixture**.
+2. Double-click the connector and confirm **Property modification**.
+3. Enter the following definition.
+
+| Field | Enter or select |
+|---|---|
+| Name | Fastening allocation architecture ownership |
+| Kind | Change to `elementProperty` |
+| Target type | `relationship` (prefilled) |
+| Target | Join components `realizedBy` Assembly fixture (prefilled) |
+| Feature expression | `feature-manual-fastening OR feature-robotic-fastening` |
+| Typed feature-value conditions | Leave blank |
+| Property path | `architectureId` |
+| Realization domain | `process` |
+
+4. Create the rules.
+
+| Order | Rule feature expression | Typed conditions | Realized value ID |
+|---:|---|---|---|
+| 1 | `feature-manual-fastening` | Blank | `arch-manual` |
+| 2 | `feature-robotic-fastening` | Blank | `arch-auto` |
+
+### Verify
+
+| Configuration | Expected relationship architectureId |
+|---|---|
+| Manual Customer Variant | `arch-manual` |
+| Automated Customer Variant | `arch-auto` |
+
+Use this example when relationship ownership is part of the architecture model.
+It does not replace the configuration's own architecture compatibility checks.
+
+## Element Property safety rule
+
+Every realized ID must already exist in the compatible 150% model. Stage-B
+realization applies Existence effects before property modifications. If a
+relationship is removed because one of its original endpoints was excluded, it
+cannot be retargeted afterward.
+
+These examples avoid that failure mode by using relationships with common,
+stable original endpoints and result elements already present in the sample.
+
+# Final verification checklist
+
+For each example:
+
+1. Save the variation point and confirm it appears in the variation-point list.
+2. Confirm there is only one enabled modification variation point for the same
+   target and property path.
+3. Confirm value rules are ordered from most specific to fallback.
+4. Save or duplicate configurations covering every rule.
+5. Validate each configuration.
+6. Derive the configuration with the example's realization domain selected, or
+   select **Entire compatible model**.
+7. Open the 100% realization and inspect the modified value or reference.
+8. Confirm the 150% source still contains its original value.
+9. Run any relevant variant-specific analysis only after derivation succeeds.
