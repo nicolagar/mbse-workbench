@@ -1,0 +1,21 @@
+{
+  "unchanged": true,
+  "errors": [],
+  "geometryStable": true,
+  "viewports": [
+    1440,
+    768,
+    390
+  ],
+  "browser": "153.0.8010.0",
+  "surfaces": [
+    "Mission-to-baseline digital thread",
+    "Stored schema role/provenance",
+    "Registry schema",
+    "Semantic matrix",
+    "Historical export",
+    "Current Trade Study",
+    "Architect preview",
+    "Modeler inspector"
+  ]
+}
