@@ -19,7 +19,7 @@ import type { ComparisonStudy } from "../domain/types";
 import { useLayeredLayout } from "../hooks/useLayeredLayout";
 import { useNodeMeasurements } from "../hooks/useNodeMeasurements";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
-import { graphPortId, OntologyGraphNode, type MeasuredGraphNodeData } from "./MeasuredGraphNodes";
+import { graphPortId, graphPositionForSide, OntologyGraphNode, type MeasuredGraphNodeData } from "./MeasuredGraphNodes";
 import { RoutedEdge, type RoutedEdgeData } from "./RoutedEdge";
 
 const ontologyEdgeTypes = { routed: RoutedEdge };
@@ -136,7 +136,8 @@ function LegacyTradeStudyOntologyView({ study }: { study: ComparisonStudy }) {
         background: colors.background,
         opacity: focused ? 1 : 0.24,
         onMeasure: reportMeasurement,
-        domain: node.domain
+        domain: node.domain,
+        ports: layout.nodePorts[node.id] ?? []
       } satisfies MeasuredGraphNodeData,
       draggable: false
     };
@@ -151,20 +152,23 @@ function LegacyTradeStudyOntologyView({ study }: { study: ComparisonStudy }) {
       const stroke = primary ? "#64748b" : "#94a3b8";
       const sourcePosition = sourceLayer <= targetLayer ? Position.Bottom : Position.Top;
       const targetPosition = sourceLayer <= targetLayer ? Position.Top : Position.Bottom;
+      const ports = layout.edgePorts[edge.id];
+      const routedSourcePosition = ports ? graphPositionForSide(ports.source.side) : sourcePosition;
+      const routedTargetPosition = ports ? graphPositionForSide(ports.target.side) : targetPosition;
       return {
         id: edge.id,
         source: edge.source,
         target: edge.target,
-        sourcePosition,
-        targetPosition,
-        sourceHandle: graphPortId("source", sourcePosition),
-        targetHandle: graphPortId("target", targetPosition),
+        sourcePosition: routedSourcePosition,
+        targetPosition: routedTargetPosition,
+        sourceHandle: ports?.source.id ?? graphPortId("source", routedSourcePosition),
+        targetHandle: ports?.target.id ?? graphPortId("target", routedTargetPosition),
         type: "routed",
         data: { points: layout.routes[edge.id], label: edge.relationship, primary } satisfies RoutedEdgeData,
         markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
         style: { stroke, strokeWidth: primary ? 1.8 : 1.25, opacity: focused ? primary ? 0.92 : 0.6 : 0.14 }
       };
-    }), [layerById, layout.routes, ontology.edges, primaryById, selectedNodeId, showSecondary]);
+    }), [layerById, layout.edgePorts, layout.routes, ontology.edges, primaryById, selectedNodeId, showSecondary]);
   const selected = ontology.nodes.find((node) => node.id === selectedNodeId);
 
   return <div className="space-y-4">

@@ -1,6 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import type { NodeMeasurement } from "../hooks/useNodeMeasurements";
+import type { LayoutPort, LayoutSide } from "../domain/graphLayouts";
 
 export type GraphNodeVariant = "model" | "feature" | "featureGroup" | "ontology";
 
@@ -17,6 +18,7 @@ export interface MeasuredGraphNodeData extends Record<string, unknown> {
   onMeasure: (id: string, measurement: NodeMeasurement) => void;
   elementType?: string;
   domain?: string;
+  ports?: LayoutPort[];
 }
 
 type MeasuredNode<Type extends string> = Node<MeasuredGraphNodeData, Type>;
@@ -26,6 +28,13 @@ const portStyle: CSSProperties = {
   height: 9,
   border: "2px solid white",
   background: "#64748b"
+};
+
+const positionBySide: Record<LayoutSide, Position> = {
+  top: Position.Top,
+  right: Position.Right,
+  bottom: Position.Bottom,
+  left: Position.Left
 };
 
 function MeasurementAwareNode<Type extends string>({ id, data, selected, isConnectable }: NodeProps<MeasuredNode<Type>>) {
@@ -61,6 +70,26 @@ function MeasurementAwareNode<Type extends string>({ id, data, selected, isConne
     />
   );
 
+  const routedHandle = (port: LayoutPort) => {
+    const position = positionBySide[port.side];
+    return <Handle
+      key={port.id}
+      aria-label={`${port.role === "source" ? "Outgoing" : "Incoming"} routed port for ${data.accessibleLabel}`}
+      id={port.id}
+      type={port.role}
+      position={position}
+      isConnectable={false}
+      style={{
+        width: 5,
+        height: 5,
+        border: 0,
+        background: "#64748b",
+        opacity: selected ? 0.55 : 0.12,
+        ...(position === Position.Top || position === Position.Bottom ? { left: port.offset } : { top: port.offset })
+      }}
+    />;
+  };
+
   return <div
     ref={ref}
     aria-label={data.accessibleLabel}
@@ -82,6 +111,7 @@ function MeasurementAwareNode<Type extends string>({ id, data, selected, isConne
     {handle("source", Position.Left, "44%")}
     {handle("target", Position.Right, "56%")}
     {handle("source", Position.Right, "44%")}
+    {data.ports?.map(routedHandle)}
     {data.content}
   </div>;
 }
@@ -95,3 +125,7 @@ export const FeatureGraphNode = (props: NodeProps<FeatureGraphNodeModel>) => <Me
 export const OntologyGraphNode = (props: NodeProps<OntologyGraphNodeModel>) => <MeasurementAwareNode {...props} />;
 
 export const graphPortId = (type: "source" | "target", position: Position) => `${type}-${position.toLowerCase()}`;
+
+export const routedGraphPortId = (type: "source" | "target", edgeId: string) => `${type}:${edgeId}`;
+
+export const graphPositionForSide = (side: LayoutSide) => positionBySide[side];

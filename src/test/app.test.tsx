@@ -280,10 +280,27 @@ describe("application shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Parameters and KPIs" }));
     expect(screen.getByText("Engineering input table")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "KPI definitions" }));
-    const formulaCard = screen.getByText("Beverage throughput KPI").closest("article")!;
+    const formulaCard = screen.getByRole("heading", { name: "Beverage throughput KPI" }).closest("article")!;
     fireEvent.click(within(formulaCard).getByRole("button", { name: "Edit metadata" }));
     expect(screen.getByPlaceholderText("Search parameters and KPIs")).toBeInTheDocument();
     expect(screen.getByText(/Formula editor · Beverage throughput KPI/)).toBeInTheDocument();
+  });
+
+  it("creates a KPI in the page without a browser prompt", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Parameters and KPIs" }));
+    fireEvent.click(screen.getByRole("button", { name: "KPI definitions" }));
+    const prompt = vi.spyOn(window, "prompt");
+    const form = screen.getByRole("heading", { name: "Create KPI" }).parentElement!;
+    fireEvent.change(within(form).getByLabelText("KPI name"), { target: { value: "Review KPI" } });
+    fireEvent.change(within(form).getByLabelText("Calculation method"), { target: { value: "standardAlgorithm" } });
+    fireEvent.change(within(form).getByLabelText("Output unit"), { target: { value: "kg" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Create KPI" }));
+    expect(prompt).not.toHaveBeenCalled();
+    expect(useAppStore.getState().projects[0].kpis.find((kpi) => kpi.name === "Review KPI")).toMatchObject({
+      calculationMode: "standardAlgorithm", standardAlgorithmKey: "totalMass", outputUnit: "kg"
+    });
+    prompt.mockRestore();
   });
 
   it("opens simulation controls and read-only history", () => {

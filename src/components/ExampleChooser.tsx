@@ -1,5 +1,6 @@
 import { RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { exampleProjectDefinitions, type ExampleProjectId } from "../data/examples";
 import { useAppStore } from "../store/useAppStore";
 import { useDialogs } from "./dialogs/DialogProvider";
@@ -35,7 +36,7 @@ export function ExampleChooser() {
 
   return <>
     <button ref={triggerRef} className="btn" onClick={() => setOpen(true)}><RotateCcw size={15} /> Load example</button>
-    {open && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
+    {open && createPortal(<div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
       <section className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-5 text-left shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="example-chooser-title">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -52,6 +53,6 @@ export function ExampleChooser() {
           </button>)}
         </div>
       </section>
-    </div>}
+    </div>, document.body)}
   </>;
 }

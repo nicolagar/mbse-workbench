@@ -29,7 +29,6 @@ import { TraceabilityMatrix } from "./TraceabilityMatrix";
 import { ValidationPanel } from "./ValidationPanel";
 import { UnitCatalogueDialog } from "./UnitCatalogueDialog";
 import { useDialogs } from "./dialogs/DialogProvider";
-import { SectionRecap } from "./SectionRecap";
 
 export function ModelWorkspace() {
   const { confirm } = useDialogs();
@@ -163,7 +162,7 @@ export function ModelWorkspace() {
     && diagramIds.has(relationship.targetId)
     && (!architectureId || !relationship.architectureId || relationship.architectureId === architectureId)
   );
-  const effectiveView = isViewAvailable(activeTab, view) ? view : "graph";
+  const effectiveView = view !== "sectionRecap" && isViewAvailable(activeTab, view) ? view : "graph";
   const layoutMode = graphLayoutModes[activeTab] ?? (effectiveView === "diagram" ? "sequence" : "hierarchy");
   return (
     <div className="space-y-4">
@@ -196,7 +195,6 @@ export function ModelWorkspace() {
         {tab.availableViews.includes("diagram") && <ViewButton active={effectiveView === "diagram"} icon={GitBranch} label="Function sequence" onClick={() => { setView("diagram"); setGraphLayoutMode(activeTab, "sequence"); }} />}
         {tab.availableViews.includes("requirementsOverview") && <ViewButton active={effectiveView === "requirementsOverview"} icon={List} label="Requirements & Validation Overview" onClick={() => setView("requirementsOverview")} />}
         {tab.availableViews.includes("matrix") && <ViewButton active={effectiveView === "matrix"} icon={Grid3X3} label={activeTab === "traceability" ? "Global traceability" : "Traceability matrix"} onClick={() => setView("matrix")} />}
-        {tab.availableViews.includes("sectionRecap") && <ViewButton active={effectiveView === "sectionRecap"} icon={Grid3X3} label="Section recap" onClick={() => setView("sectionRecap")} />}
         {tab.availableViews.includes("overview") && <ViewButton active={effectiveView === "overview"} icon={Grid3X3} label="Model Digital Thread" onClick={() => setView("overview")} />}
         {tab.availableViews.includes("quality") && <ViewButton active={effectiveView === "quality"} icon={ShieldCheck} label="Model quality" onClick={() => setView("quality")} />}
         {effectiveView === "table" && <label className="ml-auto flex items-center gap-2 text-sm text-slate-500"><ArrowDownAZ size={16} /><span className="sr-only">Table order</span><select className="field w-44" value={sortModes[type === "all" ? newElementType : type] ?? "manual"} onChange={(event) => setTableSortMode(type === "all" ? newElementType : type, event.target.value as "manual" | "az" | "za")}><option value="manual">Manual order</option><option value="az">Alphabetical A–Z</option><option value="za">Alphabetical Z–A</option></select></label>}
@@ -212,10 +210,9 @@ export function ModelWorkspace() {
             }} />
             <section className="card overflow-hidden"><button className="flex w-full items-center gap-2 p-4 text-left font-bold" aria-expanded={relationshipEditorOpen} onClick={() => setRelationshipEditorOpen((open) => !open)}>{relationshipEditorOpen ? <ChevronDown size={17} /> : <ChevronRight size={17} />}Relationship editor<span className="ml-auto text-xs font-normal text-slate-500">{relationshipEditorOpen ? "Hide" : "Show"}</span></button>{relationshipEditorOpen && <div className="border-t border-slate-200 p-4"><RelationshipManager /></div>}</section>
           </>}
-          {effectiveView === "graph" && <section className="card overflow-hidden"><div className="flex items-center gap-4 border-b border-slate-200 p-4"><div className="min-w-0 flex-1"><h2 className="font-bold">{tab.graphLabel}</h2><p className="text-xs text-slate-500">{tab.graphDescription} Newly created elements appear immediately; typed context references are shown as dashed teal connections.</p></div><label className="w-48"><span className="label">Layout</span><select className="field" value={layoutMode} onChange={(event) => setGraphLayoutMode(activeTab, event.target.value as GraphLayoutMode)}>{tab.graphLayoutModes.map((mode) => <option value={mode} key={mode}>{mode === "manual" ? "Manual positions" : mode === "hierarchy" ? "Automatic hierarchy" : mode === "horizontal" ? "Left-to-right hierarchy" : "Sequence stages"}</option>)}</select></label></div><ModelGraph elements={diagramElements} relationships={diagramRelationships} contextRelationships={diagramContextRelationships} layoutMode={layoutMode} layoutKey={`tab:${activeTab}`} scopedElementIds={scopeIds} /></section>}
+          {effectiveView === "graph" && <section className="card overflow-hidden"><div className="border-b border-slate-200 p-4"><h2 className="font-bold">{tab.graphLabel}</h2><p className="mt-1 text-xs text-slate-500">Select a card, its complete upstream path, or its complete downstream path. Internal relationships within one area remain in Full graph.</p><div className="mt-3"><label className="block w-48"><span className="label">Layout</span><select className="field" value={layoutMode} onChange={(event) => setGraphLayoutMode(activeTab, event.target.value as GraphLayoutMode)}>{tab.graphLayoutModes.map((mode) => <option value={mode} key={mode}>{mode === "manual" ? "Manual positions" : mode === "hierarchy" ? "Automatic hierarchy" : mode === "horizontal" ? "Left-to-right hierarchy" : "Sequence stages"}</option>)}</select></label></div></div><ModelGraph elements={diagramElements} relationships={diagramRelationships} contextRelationships={diagramContextRelationships} layoutMode={layoutMode} layoutKey={`tab:${activeTab}`} scopedElementIds={scopeIds} /></section>}
           {effectiveView === "diagram" && tab.sequenceDomain && <FunctionSequencePanel domain={tab.sequenceDomain} contextElements={diagramElements} layoutMode={layoutMode} onLayoutModeChange={(mode) => setGraphLayoutMode(activeTab, mode)} scopedElementIds={scopeIds} />}
           {effectiveView === "requirementsOverview" && <RequirementsValidationOverview />}
-          {effectiveView === "sectionRecap" && <SectionRecap tab={activeTab} />}
           {effectiveView === "overview" && <ModellingRecap />}
           {effectiveView === "matrix" && <SemanticParallelPanel flag="showSemanticMatrix" label="Open read-only Digital Thread matrix"><section className="card overflow-hidden"><div className="border-b border-slate-200 p-4"><h2 className="font-bold">{activeTab === "traceability" ? "Global editable traceability matrix" : "Editable traceability matrix"}</h2><p className="text-xs text-slate-500">{activeTab === "traceability" ? "Every model element is available in one cross-domain overview." : "Previous-step and current-step elements remain visible even before they are connected."} Teal cells are typed references edited in element details; other links use canonical stored directions.</p></div><TraceabilityMatrix elements={diagramElements} relationships={diagramRelationships} contextRelationships={diagramContextRelationships} columnTypes={tab.matrixTypes} scopedElementIds={scopeIds} /></section></SemanticParallelPanel>}
           {effectiveView === "quality" && <ValidationPanel />}

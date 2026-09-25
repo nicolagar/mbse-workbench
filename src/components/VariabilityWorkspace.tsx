@@ -253,6 +253,7 @@ function VariationPoints() {
         elements={visibleElements}
         relationships={visibleRelationships}
         layoutKey="variability:variation-points"
+        workflowOverview={false}
         onElementDoubleClick={(elementId) => openTarget({ elementId, kind: "existence" })}
         onElementAttributeDoubleClick={(elementId, propertyPath, kind = "primitiveProperty") => openTarget({ elementId, kind, propertyPath })}
         onRelationshipDoubleClick={(relationshipId) => openTarget({ relationshipId, kind: "existence" })}
@@ -566,6 +567,7 @@ function PreviewModel({ configuration }: { configuration?: Configuration }) {
         elements={source.elements}
         relationships={source.relationships}
         layoutKey="variability:150-percent"
+        workflowOverview={false}
         elementStatuses={preview?.elementStatus}
         relationshipStatuses={preview?.relationshipStatus}
         onElementDoubleClick={(elementId) => openTarget({ elementId, kind: "existence" })}
@@ -626,7 +628,15 @@ function DerivedModel({ configuration }: { configuration?: Configuration }) {
   return <div className="space-y-4">
     <section className="card flex items-center gap-3 p-4"><span className="badge bg-slate-100">Read-only immutable 100% realization</span><span className="badge bg-blue-50 text-blue-700">{derivationStatus(project, configuration)}</span><TransformationButton configuration={configuration} /><label className="ml-auto text-sm"><input className="mr-2" type="checkbox" checked={showRemoved} onChange={(event) => setShowRemoved(event.target.checked)} />Show removed content as red audit overlay</label></section>
     <section className={`card overflow-hidden ${inspected ? "grid grid-cols-[minmax(0,1fr)_360px] max-xl:grid-cols-1" : ""}`}>
-      <ModelGraph elements={renderedElements} relationships={renderedRelationships} layoutKey={`realization:${configuration.id}`} readOnly elementStatuses={allStatuses} relationshipStatuses={relationshipStatuses} />
+      <ModelGraph
+        elements={renderedElements}
+        relationships={renderedRelationships}
+        layoutKey={`realization:${configuration.id}`}
+        workflowOverview={false}
+        readOnly
+        elementStatuses={allStatuses}
+        relationshipStatuses={relationshipStatuses}
+      />
       {inspected && <aside className="border-l bg-white p-5 max-xl:border-l-0 max-xl:border-t"><div className="text-xs font-bold uppercase text-slate-500">{elementTypeLabels[inspected.elementType]} · read-only inspector</div><h3 className="mt-1 text-lg font-bold">{inspected.name}</h3><p className="mt-2 text-sm text-slate-600">{inspected.description || "No description."}</p><dl className="mt-4 grid grid-cols-[110px_1fr] gap-2 text-xs max-sm:grid-cols-1"><dt className="font-semibold">ID</dt><dd className="font-mono">{inspected.id}</dd><dt className="font-semibold">Status</dt><dd>{allStatuses[inspected.id]}</dd><dt className="font-semibold">Parameters</dt><dd>{inspected.parameters.map((parameter) => `${parameter.name}: ${parameter.value ?? "—"} ${parameter.unit ?? ""}`).join("; ") || "None"}</dd></dl></aside>}
     </section>
     <section className="card p-5"><h3 className="font-bold">Applied variation audit</h3><div className="mt-2 space-y-2 text-sm">{derivation.appliedVariations?.map((variation, index) => <div className="rounded-lg bg-slate-50 p-3" key={`${variation.variationPointId}-${variation.targetId}-${index}`}><strong>{project.variationPoints.find((item) => item.id === variation.variationPointId)?.name ?? variation.variationPointId}</strong> · {variation.effect} {variation.targetKind} <code>{variation.targetId}</code>{variation.propertyPath && <> · <code>{variation.propertyPath}</code>: {JSON.stringify(variation.previousValue)} → {JSON.stringify(variation.nextValue)}</>}</div>) ?? <div>No variation audit is available for this legacy derivation.</div>}</div></section>

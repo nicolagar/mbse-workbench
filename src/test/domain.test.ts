@@ -135,7 +135,7 @@ describe("REV_02 section projections and layouts", () => {
     expect(layers[stakeholder.id].layer).toBeLessThan(layers[need.id].layer);
   });
 
-  it("creates non-overlapping bands and routes long links outside intermediate cards", async () => {
+  it("creates non-overlapping semantic regions and routes long links around intermediate cards", async () => {
     const layout = await calculateLayeredLayout({
       direction: "DOWN",
       nodes: [
@@ -150,7 +150,19 @@ describe("REV_02 section projections and layouts", () => {
     });
     expect(layout.positions.root.y + 90).toBeLessThan(layout.positions.middle.y);
     expect(layout.positions.middle.y + 120).toBeLessThan(layout.positions.leaf.y);
-    expect(layout.routes.cross.some((point) => point.x < 0 || point.x > layout.width)).toBe(true);
+    const middle = layout.positions.middle;
+    const intersectsMiddle = layout.routes.cross.slice(1).some((point, index) => {
+      const previous = layout.routes.cross[index];
+      if (previous.x === point.x) {
+        return point.x > middle.x && point.x < middle.x + 220
+          && Math.min(previous.y, point.y) < middle.y + 120
+          && Math.max(previous.y, point.y) > middle.y;
+      }
+      return point.y > middle.y && point.y < middle.y + 120
+        && Math.min(previous.x, point.x) < middle.x + 220
+        && Math.max(previous.x, point.x) > middle.x;
+    });
+    expect(intersectsMiddle).toBe(false);
   });
 
   it("derives feature depth from containment while remaining cycle safe", () => {

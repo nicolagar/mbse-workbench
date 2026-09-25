@@ -1,3 +1,16 @@
+## Model graph V04 readability rework (merged) — 2026-09-25
+
+Merged an independently developed graph-readability rework (source: `mbse-mbple-workbench-04_updated_ontology_V05` package) on top of the repository-hygiene and in-app-dialog work below, reconciling both against their common ancestor:
+
+- Added a dense-model "Workflow overview" presentation for `ModelGraph` (`src/components/GraphReadabilityOverview.tsx`, `src/domain/modelGraphV04Layouts.ts`, `src/hooks/useModelGraphV04Layout.ts`, `src/components/ModelGraphV04Edge.tsx`), selectable per graph, with single-click select / double-click inspect and a full-screen zoom control.
+- Reworked `FeatureGraph`'s layout to stay stable across relationship-view/configuration changes, added dense-graph auto-zoom, and split single-click (select) from double-click (open editor).
+- Portaled the `ExampleChooser` dialog to `document.body` so it can no longer be clipped by an ancestor's stacking context.
+- Replaced the `KpiTable` "Create KPI" prompt chain with an inline form (name, method, algorithm, unit, direction, weight, objective, `KpiFormulaBuilder`) instead of sequential dialogs.
+- Removed the unused "Section recap" Model view.
+- `.gitignore` extended with `*.local`, `coverage/`, `.vite/`, `.semantic-browser-results/`; added `.nvmrc` pinning Node 24.
+
+The in-app dialogs introduced below were re-applied on top of this rework wherever it did not already replace them (KpiTable's edit/preview/delete, all of ParameterTable, `ModelGraph`'s `onConnect`/relationship editor, `ExampleChooser`'s confirm).
+
 ## Repository hygiene and in-app dialogs — 2026-09-25
 
 - Pointed `render.yaml` at `main` instead of a stale feature branch, and added title, description, favicon and Open Graph/Twitter share metadata to `index.html`.

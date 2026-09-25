@@ -14,7 +14,7 @@
   "src/domain/exportImport.ts": "fe1c516765d72389ee75aec7ed9044c5d7244ac0",
   "src/domain/featureExpressions.ts": "2f1410929b8cc254efc590201fa3999b6d910b5d",
   "src/domain/formulas.ts": "1c8dc0aeb7971b8ef16b5e7e47d74b203ece42ee",
-  "src/domain/graphLayouts.ts": "5e5539882ca662916082363cc84cefcd6be0aacf",
+  "src/domain/graphLayouts.ts": "0175344ce25d4b213123018eefd2242642d0eb4d",
   "src/domain/kpiFormulas.ts": "e369d66c4813bccec09ac7c19f9e205535999dfd",
   "src/domain/maturity.ts": "31096d4bc7580711349aa1c0e2bd7835dd093700",
   "src/domain/metrics.ts": "79ed32d5e0db4cf695ef7290993c36ca96e51405",

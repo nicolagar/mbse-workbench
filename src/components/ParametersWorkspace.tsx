@@ -7,6 +7,7 @@ import { calculateSelectedKpis } from "../domain/presizing";
 import type { KPI, Parameter, StandardAlgorithmKey } from "../domain/types";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { UnitCatalogueDialog } from "./UnitCatalogueDialog";
+import { KpiFormulaBuilder } from "./KpiFormulaBuilder";
 import { useDialogs } from "./dialogs/DialogProvider";
 
 const algorithms: StandardAlgorithmKey[] = [
@@ -126,6 +127,15 @@ function KpiTable() {
   const [formulaEditorId, setFormulaEditorId] = useState("");
   const [formulaDraft, setFormulaDraft] = useState("");
   const [tokenSearch, setTokenSearch] = useState("");
+  const [kpiName, setKpiName] = useState("");
+  const [kpiMode, setKpiMode] = useState<KPI["calculationMode"]>("formula");
+  const [kpiAlgorithm, setKpiAlgorithm] = useState<StandardAlgorithmKey>("totalMass");
+  const [kpiUnit, setKpiUnit] = useState("");
+  const [kpiDirection, setKpiDirection] = useState<KPI["optimizationDirection"]>("minimize");
+  const [kpiWeight, setKpiWeight] = useState(1);
+  const [kpiObjectiveId, setKpiObjectiveId] = useState("");
+  const [kpiFormula, setKpiFormula] = useState("");
+  const [createError, setCreateError] = useState("");
   const formulaKpi = project.kpis.find((kpi) => kpi.id === formulaEditorId);
   const parameterTokens = project.elements.flatMap((element) => element.parameters.map((parameter) => ({
     id: parameter.id,
@@ -140,21 +150,25 @@ function KpiTable() {
   const matchingTokens = [...parameterTokens, ...kpiTokens].filter((item) =>
     `${item.label} ${item.id}`.toLowerCase().includes(tokenSearch.toLowerCase())
   );
-  const create = async () => {
-    const name = (await promptText("KPI name", "New KPI"))?.trim();
-    if (!name) return;
-    const mode = (await promptText("Mode: formula or standardAlgorithm", "formula")) as KPI["calculationMode"] | null;
-    if (!mode || !["formula", "standardAlgorithm"].includes(mode)) return;
-    const now = new Date().toISOString();
-    const formula = mode === "formula" ? (await promptText('Formula, e.g. param("parameter-id")', "1")) ?? "1" : undefined;
-    const standardAlgorithmKey = mode === "standardAlgorithm" ? (await promptText(`Algorithm: ${algorithms.join(", ")}`, "totalMass")) as StandardAlgorithmKey : undefined;
-    try { if (formula) parseKpiFormula(formula); } catch (error) { return void alertUser(error instanceof Error ? error.message : "Invalid formula."); }
-    const id = `kpi-${crypto.randomUUID()}`;
-    addKpi({ id, name, description: "", objectiveIds: [], calculationMode: mode, formula, standardAlgorithmKey, outputUnit: (await promptText("Output unit", "")) ?? "", optimizationDirection: "minimize", weight: 1, inputParameterIds: formula ? formulaReferences(parseKpiFormula(formula)).parameterIds : [], dependsOnKpiIds: formula ? formulaReferences(parseKpiFormula(formula)).kpiIds : [], calculationWarnings: [], createdAt: now, updatedAt: now });
-    if (mode === "formula") {
-      setFormulaEditorId(id);
-      setFormulaDraft(formula ?? "");
+  const create = () => {
+    const name = kpiName.trim();
+    if (!name || !kpiUnit.trim() || !Number.isFinite(kpiWeight) || kpiWeight < 0) {
+      setCreateError("Enter a KPI name, output unit and non-negative weight.");
+      return;
     }
+    let references = { parameterIds: [] as string[], kpiIds: [] as string[] };
+    try {
+      if (kpiMode === "formula") {
+        references = formulaReferences(parseKpiFormula(kpiFormula));
+        const parameters = new Set(project.elements.flatMap((element) => element.parameters.map((parameter) => parameter.id)));
+        const missing = [...references.parameterIds.filter((id) => !parameters.has(id)), ...references.kpiIds.filter((id) => !project.kpis.some((kpi) => kpi.id === id))];
+        if (missing.length) throw new Error(`Missing references: ${missing.join(", ")}.`);
+      }
+    } catch (error) { setCreateError(error instanceof Error ? error.message : "Invalid KPI formula."); return; }
+    const now = new Date().toISOString();
+    const id = `kpi-${crypto.randomUUID()}`;
+    addKpi({ id, name, description: "", objectiveIds: kpiObjectiveId ? [kpiObjectiveId] : [], calculationMode: kpiMode, formula: kpiMode === "formula" ? kpiFormula : undefined, standardAlgorithmKey: kpiMode === "standardAlgorithm" ? kpiAlgorithm : undefined, outputUnit: kpiUnit.trim(), optimizationDirection: kpiDirection, weight: kpiWeight, inputParameterIds: references.parameterIds, dependsOnKpiIds: references.kpiIds, calculationWarnings: [], createdAt: now, updatedAt: now });
+    setKpiName(""); setKpiFormula(""); setCreateError("");
   };
   const edit = async (kpi: KPI) => {
     if (kpi.calculationMode === "formula") {
@@ -177,7 +191,21 @@ function KpiTable() {
     const value = calculation.results.find((result) => result.kpiId === kpi.id);
     void alertUser(calculation.errors.length ? calculation.errors.join("\n") : `${kpi.name}: ${value?.value ?? "Not available"} ${value?.unit ?? kpi.outputUnit}\n${value?.warnings.join("\n") ?? ""}`);
   };
-  return <section className="card p-5"><div className="flex justify-between"><div><h2 className="text-lg font-bold">KPI definitions</h2><p className="text-sm text-slate-500">Formula references are exact stable IDs; no display-name matching or dynamic JavaScript is used.</p></div><button className="btn btn-primary" onClick={create}><Plus size={15} /> KPI</button></div>
+  return <section className="card p-5"><div><h2 className="text-lg font-bold">KPI definitions</h2><p className="text-sm text-slate-500">Formula references are exact stable IDs; no display-name matching or dynamic JavaScript is used.</p></div>
+    <div className="mt-4 rounded-xl border border-slate-200 p-4"><h3 className="font-bold">Create KPI</h3>
+      <div className="mt-3 grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+        <label><span className="label">KPI name</span><input className="field" value={kpiName} onChange={(event) => setKpiName(event.target.value)} /></label>
+        <label><span className="label">Calculation method</span><select className="field" value={kpiMode} onChange={(event) => setKpiMode(event.target.value as KPI["calculationMode"])}><option value="formula">Formula</option><option value="standardAlgorithm">Standard algorithm</option></select></label>
+        {kpiMode === "standardAlgorithm" && <label><span className="label">Standard algorithm</span><select className="field" value={kpiAlgorithm} onChange={(event) => setKpiAlgorithm(event.target.value as StandardAlgorithmKey)}>{algorithms.map((algorithm) => <option key={algorithm} value={algorithm}>{algorithm}</option>)}</select></label>}
+        <label><span className="label">Output unit</span><input className="field" value={kpiUnit} onChange={(event) => setKpiUnit(event.target.value)} placeholder="kg, EUR, h…" /></label>
+        <label><span className="label">Optimization direction</span><select className="field" value={kpiDirection} onChange={(event) => setKpiDirection(event.target.value as KPI["optimizationDirection"])}><option value="minimize">Minimize</option><option value="maximize">Maximize</option></select></label>
+        <label><span className="label">Global weight</span><input className="field" type="number" min="0" value={kpiWeight} onChange={(event) => setKpiWeight(Number(event.target.value))} /></label>
+        <label><span className="label">Objective measured</span><select className="field" value={kpiObjectiveId} onChange={(event) => setKpiObjectiveId(event.target.value)}><option value="">Select an objective (optional)</option>{project.elements.filter((element) => element.elementType === "objective").map((objective) => <option key={objective.id} value={objective.id}>{objective.name}</option>)}</select></label>
+      </div>
+      {kpiMode === "formula" && <div className="mt-4"><KpiFormulaBuilder project={project} value={kpiFormula} onDraftChange={setKpiFormula} onSave={(formula) => { setKpiFormula(formula); setCreateError(""); }} /></div>}
+      {createError && <p role="alert" className="mt-2 text-sm text-red-700">{createError}</p>}
+      <button className="btn btn-primary mt-4" onClick={create}><Plus size={15} /> Create KPI</button>
+    </div>
     {formulaKpi && <div className="mt-4 rounded-xl border border-purple-200 bg-purple-50 p-4"><div className="flex justify-between"><div><h3 className="font-bold">Formula editor · {formulaKpi.name}</h3><p className="text-xs text-slate-600">Search the canonical model and insert exact immutable reference tokens.</p></div><button className="btn" onClick={() => setFormulaEditorId("")}>Close</button></div>
       <textarea className="field mt-3 min-h-24 font-mono" value={formulaDraft} onChange={(event) => setFormulaDraft(event.target.value)} />
       <div className="mt-3 grid grid-cols-[260px_1fr] gap-3 max-md:grid-cols-1"><input className="field" value={tokenSearch} onChange={(event) => setTokenSearch(event.target.value)} placeholder="Search parameters and KPIs" /><div className="flex max-h-32 flex-wrap gap-2 overflow-auto">{matchingTokens.map((item) => <button className="btn bg-white" key={`${item.token}-${item.id}`} title={item.token} onClick={() => setFormulaDraft((draft) => `${draft}${draft && !/[\s(,+\-*/]$/.test(draft) ? " " : ""}${item.token}`)}>{item.label}<code className="ml-1 text-[10px]">{item.token}</code></button>)}</div></div>

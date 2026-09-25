@@ -12,24 +12,27 @@ import {
 } from "@xyflow/react";
 import { RefreshCw, Save, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { isPrimaryHierarchyRelationship, semanticElementLayers, type LayeredLayoutRequest } from "../domain/graphLayouts";
+import { isPrimaryHierarchyRelationship, semanticElementLayers, type LayeredLayoutRequest } from "../domain/modelGraphV04Layouts";
 import type { ContextConnection } from "../domain/contextConnections";
 import { compatibleRelationshipTypes } from "../domain/relationships";
 import { analyzeSequence } from "../domain/sequences";
 import { elementTypeColors, elementTypeLabels, type FunctionSequence, type GraphLayoutMode, type ModelElement, type Relationship, type RelationshipType } from "../domain/types";
-import { useLayeredLayout } from "../hooks/useLayeredLayout";
+import { useModelGraphV04Layout } from "../hooks/useModelGraphV04Layout";
 import { useNodeMeasurements } from "../hooks/useNodeMeasurements";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { graphPortId, ModelGraphNode, type MeasuredGraphNodeData } from "./MeasuredGraphNodes";
-import { RoutedEdge, type RoutedEdgeData } from "./RoutedEdge";
+import { ModelGraphV04Edge, type ModelGraphV04EdgeData } from "./ModelGraphV04Edge";
+import { ModelWorkflowOverview } from "./GraphReadabilityOverview";
+import { contextConnections } from "../domain/contextConnections";
 import { useDialogs } from "./dialogs/DialogProvider";
 
 type GraphDensity = "compact" | "detailed";
 type RelationshipView = "structure" | "all" | "selection";
+type GraphPresentation = "overview" | "canvas";
 type GraphConnection = (Relationship & { context?: false }) | (ContextConnection & { context: true });
 
 const MODEL_NODE_WIDTH = 225;
-const routedEdgeTypes = { routed: RoutedEdge };
+const routedEdgeTypes = { routed: ModelGraphV04Edge };
 const modelNodeTypes = { modelGraphNode: ModelGraphNode };
 
 const modelNodeHeight = (
@@ -64,6 +67,7 @@ export function ModelGraph({
   allowDetailed = true,
   heightClass = "h-[620px]",
   layerOverrides,
+  workflowOverview,
   onElementDoubleClick,
   onElementAttributeDoubleClick,
   onRelationshipDoubleClick,
@@ -82,6 +86,7 @@ export function ModelGraph({
   allowDetailed?: boolean;
   heightClass?: string;
   layerOverrides?: Record<string, { layer: number; label: string }>;
+  workflowOverview?: boolean;
   onElementDoubleClick?: (elementId: string) => void;
   onElementAttributeDoubleClick?: (elementId: string, propertyPath: string, kind?: "primitiveProperty" | "primitiveTag") => void;
   onRelationshipDoubleClick?: (relationshipId: string) => void;
@@ -90,15 +95,17 @@ export function ModelGraph({
   const { alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const selectElement = useAppStore((state) => state.selectElement);
-  const selectedElementId = useAppStore((state) => state.selectedElementId);
   const selectedRelationshipId = useAppStore((state) => state.selectedRelationshipId);
   const selectRelationship = useAppStore((state) => state.selectRelationship);
   const addRelationship = useAppStore((state) => state.addRelationship);
   const updateElement = useAppStore((state) => state.updateElement);
+  const overviewEnabled = workflowOverview ?? (!sequence && layoutMode !== "sequence" && layoutMode !== "horizontal");
   const [temporaryRelationshipId, setTemporaryRelationshipId] = useState<string | null>(null);
   const [pendingConnection, setPendingConnection] = useState<{ connection: Connection; types: RelationshipType[] } | null>(null);
   const [density, setDensity] = useState<GraphDensity>("compact");
   const [relationshipView, setRelationshipView] = useState<RelationshipView>("structure");
+  const [presentation, setPresentation] = useState<GraphPresentation>(() => overviewEnabled && (elements.length >= 24 || relationships.length + contextRelationships.length >= 40) ? "overview" : "canvas");
+  const [graphSelectedElementId, setGraphSelectedElementId] = useState<string | null>(null);
   const [layoutRevision, setLayoutRevision] = useState(0);
   const { measurements, reportMeasurement } = useNodeMeasurements();
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -174,27 +181,33 @@ export function ModelGraph({
         primary: primaryById.get(relationship.id) ?? false
       }))
   }), [allConnections, elements, horizontalLayout, ids, layoutLayers, measurements, nodeHeights, primaryById]);
-  const automaticLayout = useLayeredLayout(layoutRequest, layoutRevision);
+  const automaticLayout = useModelGraphV04Layout(layoutRequest, layoutRevision);
 
   useEffect(() => {
-    if (layoutMode === "manual") return;
+    if (layoutMode === "manual" || presentation !== "canvas") return;
     const frame = requestAnimationFrame(() => flowInstance.current?.fitView({ padding: 0.16, duration: 250 }));
     return () => cancelAnimationFrame(frame);
-  }, [automaticLayout, layoutMode]);
+  }, [automaticLayout, layoutMode, presentation]);
 
   const connectedToSelection = useMemo(() => new Set(allConnections.flatMap((relationship) =>
-    relationship.sourceId === selectedElementId ? [relationship.targetId]
-      : relationship.targetId === selectedElementId ? [relationship.sourceId]
+    relationship.sourceId === graphSelectedElementId ? [relationship.targetId]
+      : relationship.targetId === graphSelectedElementId ? [relationship.sourceId]
         : []
-  )), [allConnections, selectedElementId]);
+  )), [allConnections, graphSelectedElementId]);
   const visibleRelationships = useMemo(() => allConnections.filter((relationship) => {
     if (!ids.has(relationship.sourceId) || !ids.has(relationship.targetId)) return false;
     if (relationshipView === "all") return true;
-    if (relationshipView === "selection" && selectedElementId) {
-      return relationship.sourceId === selectedElementId || relationship.targetId === selectedElementId;
+    if (relationshipView === "selection" && graphSelectedElementId) {
+      return relationship.sourceId === graphSelectedElementId || relationship.targetId === graphSelectedElementId;
     }
     return primaryById.get(relationship.id) ?? false;
-  }), [allConnections, ids, primaryById, relationshipView, selectedElementId]);
+  }), [allConnections, ids, primaryById, relationshipView, graphSelectedElementId]);
+  // The workflow overview covers the whole active model, regardless of which
+  // workspace projection supplied the Full graph below it.
+  const overviewRelationships = useMemo(() => [
+    ...project.relationships,
+    ...contextConnections(project)
+  ], [project]);
   const bandNodes: Node[] = layoutMode === "manual" ? [] : automaticLayout.bands.map((band, index) => ({
     id: `__${band.id}`,
     type: "group",
@@ -215,7 +228,7 @@ export function ModelGraph({
     focusable: false
   }));
   const modelNodes: Node[] = useMemo(() => elements.map((element, index) => {
-    const focused = relationshipView !== "selection" || !selectedElementId || selectedElementId === element.id || connectedToSelection.has(element.id);
+    const focused = relationshipView !== "selection" || !graphSelectedElementId || graphSelectedElementId === element.id || connectedToSelection.has(element.id);
     return {
       id: element.id,
       type: "modelGraphNode",
@@ -251,14 +264,14 @@ export function ModelGraph({
         width: MODEL_NODE_WIDTH,
         minimumHeight: nodeHeights[element.id],
         variant: "model",
-        borderColor: selectedElementId === element.id ? "#1d4ed8" : elementStatuses?.[element.id] === "excluded" ? "#dc2626" : elementStatuses?.[element.id] === "included" ? "#16a34a" : elementStatuses?.[element.id] === "modified" ? "#d97706" : elementTypeColors[element.elementType],
+        borderColor: graphSelectedElementId === element.id ? "#1d4ed8" : elementStatuses?.[element.id] === "excluded" ? "#dc2626" : elementStatuses?.[element.id] === "included" ? "#16a34a" : elementStatuses?.[element.id] === "modified" ? "#d97706" : elementTypeColors[element.elementType],
         background: elementStatuses?.[element.id] === "excluded" ? "#fef2f2" : elementStatuses?.[element.id] === "included" ? "#f0fdf4" : elementStatuses?.[element.id] === "modified" ? "#fffbeb" : "white",
         opacity: focused ? scopedElementIds && !scopedElementIds.has(element.id) ? 0.72 : 1 : 0.24,
         onMeasure: reportMeasurement,
         elementType: element.elementType
       } satisfies MeasuredGraphNodeData
     };
-  }), [allConnections, automaticLayout.positions, connectedToSelection, density, elementStatuses, elements, layoutKey, layoutMode, nodeHeights, onElementAttributeDoubleClick, project.variationPoints, relationshipView, reportMeasurement, scopedElementIds, selectedElementId, sequenceAnalysis]);
+  }), [allConnections, automaticLayout.positions, connectedToSelection, density, elementStatuses, elements, layoutKey, layoutMode, nodeHeights, onElementAttributeDoubleClick, project.variationPoints, relationshipView, reportMeasurement, scopedElementIds, graphSelectedElementId, sequenceAnalysis]);
   const nodes: Node[] = [...bandNodes, ...modelNodes];
   const edges: Edge[] = useMemo(() => visibleRelationships.map((relationship) => {
       const storedRelationship = relationship.context ? undefined : relationship;
@@ -313,7 +326,7 @@ export function ModelGraph({
           points: automaticLayout.routes[relationship.id],
           label: variationCount ? `Var(${variationCount}) · ${label}` : label,
           primary
-        } satisfies RoutedEdgeData : undefined,
+        } satisfies ModelGraphV04EdgeData : undefined,
         markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
         animated: highlighted,
         style: {
@@ -381,12 +394,12 @@ export function ModelGraph({
   return (
     <div aria-label="Model navigation graph">
       <div className="flex flex-wrap items-end gap-3 border-b border-slate-200 bg-white px-4 py-3">
-        <div className="min-w-52 flex-1"><div className="text-xs font-bold text-slate-700">Readable graph view</div><p className="text-[11px] text-slate-500">{layoutMode === "sequence" ? "Stages run left to right." : layoutMode === "hierarchy" ? "Types occupy fixed top-down semantic bands." : "Manual positions are preserved."}</p></div>
-        <label className="w-40"><span className="label">Relationships</span><select aria-label="Graph relationships" className="field" value={relationshipView} onChange={(event) => setRelationshipView(event.target.value as RelationshipView)}><option value="structure">Primary structure</option><option value="all">All relationships</option><option value="selection">Selected element</option></select></label>
-        {allowDetailed && <label className="w-32"><span className="label">Card detail</span><select aria-label="Graph card detail" className="field" value={density} onChange={(event) => setDensity(event.target.value as GraphDensity)}><option value="compact">Compact</option><option value="detailed">Detailed</option></select></label>}
-        <button className="btn" disabled={layoutMode === "manual"} onClick={() => setLayoutRevision((current) => current + 1)}><RefreshCw size={14} /> Auto-arrange</button>
+        {overviewEnabled && <label className="w-40"><span className="label">Presentation</span><select aria-label="Graph presentation" className="field" value={presentation} onChange={(event) => { const next = event.target.value as GraphPresentation; if (next === "overview" && relationshipView === "selection") setRelationshipView("structure"); setPresentation(next); }}><option value="overview">Workflow overview</option><option value="canvas">Full graph</option></select></label>}
+        {presentation === "canvas" && <label className="w-40"><span className="label">Relationships</span><select aria-label="Graph relationships" className="field" value={relationshipView} onChange={(event) => setRelationshipView(event.target.value as RelationshipView)}><option value="structure">Primary structure</option><option value="all">All relationships</option><option value="selection">Selected element</option></select></label>}
+        {presentation === "canvas" && allowDetailed && <label className="w-32"><span className="label">Card detail</span><select aria-label="Graph card detail" className="field" value={density} onChange={(event) => setDensity(event.target.value as GraphDensity)}><option value="compact">Compact</option><option value="detailed">Detailed</option></select></label>}
+        {presentation === "canvas" && <button className="btn" disabled={layoutMode === "manual"} onClick={() => setLayoutRevision((current) => current + 1)}><RefreshCw size={14} /> Auto-arrange</button>}
       </div>
-      <div className={`relative ${heightClass}`}>
+      {presentation === "overview" && overviewEnabled ? <ModelWorkflowOverview elements={project.elements} connections={overviewRelationships} projectId={project.id} selectionKey={`${project.id}:${layoutKey}`} heightClass={heightClass} onElementDoubleClick={(id) => { selectElement(id); onElementDoubleClick?.(id); }} /> : <div className={`relative ${heightClass}`}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -397,10 +410,14 @@ export function ModelGraph({
           }}
           onConnect={onConnect}
           onNodeClick={(_, node) => {
-            if (!node.id.startsWith("__band:")) selectElement(node.id);
+            if (!node.id.startsWith("__band:")) setGraphSelectedElementId(node.id);
           }}
           onNodeDoubleClick={(_, node) => {
-            if (!node.id.startsWith("__band:")) onElementDoubleClick?.(node.id);
+            if (!node.id.startsWith("__band:")) {
+              setGraphSelectedElementId(node.id);
+              selectElement(node.id);
+              onElementDoubleClick?.(node.id);
+            }
           }}
           onNodeDragStop={(_, node) => {
             if (readOnly || layoutMode !== "manual") return;
@@ -449,9 +466,9 @@ export function ModelGraph({
         )}
         {!readOnly && selectedRelationship && <GraphRelationshipEditor relationship={selectedRelationship} onClose={() => selectRelationship(null)} />}
         <div className="pointer-events-none absolute bottom-3 left-3 rounded bg-white/95 px-3 py-2 text-xs text-slate-600 shadow">
-          {readOnly ? "Read-only realization · select a node or relationship to inspect it" : <>{layoutMode === "manual" ? "Drag nodes to persist positions · " : "Automatic layout keeps connectors outside cards · "}drag between handles to create · double-click for variability</>}
+          {readOnly ? "Read-only realization · single-click highlights · double-click inspects" : <>{layoutMode === "manual" ? "Drag nodes to persist positions · " : "Automatic layout keeps connectors outside cards · "}drag between handles to create · double-click for variability</>}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -1,12 +1,12 @@
 import { Background, Controls, MarkerType, MiniMap, Position, ReactFlow, type Connection, type Edge, type Node, type ReactFlowInstance } from "@xyflow/react";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { containmentNodeLayers, type LayeredLayoutRequest } from "../domain/graphLayouts";
+import { containmentNodeLayers, routeManualLayout, type LayeredLayoutRequest } from "../domain/graphLayouts";
 import type { Configuration, Feature, FeatureGroup } from "../domain/types";
 import { useLayeredLayout } from "../hooks/useLayeredLayout";
 import { useNodeMeasurements } from "../hooks/useNodeMeasurements";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
-import { FeatureGraphNode, graphPortId, type MeasuredGraphNodeData } from "./MeasuredGraphNodes";
+import { FeatureGraphNode, graphPortId, graphPositionForSide, type MeasuredGraphNodeData } from "./MeasuredGraphNodes";
 import { RoutedEdge, type RoutedEdgeData } from "./RoutedEdge";
 import { SideEditor } from "./SideEditor";
 import { useDialogs } from "./dialogs/DialogProvider";
@@ -38,6 +38,7 @@ export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature
   const { alertUser } = useDialogs();
   const project = useAppStore(selectActiveProject)!;
   const selectedFeatureId = useAppStore((state) => state.selectedFeatureId);
+  const [graphSelectedFeatureId, setGraphSelectedFeatureId] = useState<string | null>(selectedFeatureId);
   const updateFeature = useAppStore((state) => state.updateFeature);
   const updateFeatureGroup = useAppStore((state) => state.updateFeatureGroup);
   const addConstraint = useAppStore((state) => state.addFeatureConstraint);
@@ -48,6 +49,7 @@ export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature
   const [layoutRevision, setLayoutRevision] = useState(0);
   const { measurements, reportMeasurement } = useNodeMeasurements();
   const flowInstance = useRef<ReactFlowInstance>();
+  const denseGraph = project.features.length + project.featureGroups.length >= 24;
   const containmentModels = useMemo(() => [
     ...project.features.flatMap((feature) => {
       const source = feature.parentGroupId ? `group:${feature.parentGroupId}` : feature.parentId;
@@ -84,7 +86,7 @@ export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature
       ...project.features.map((feature) => ({
         id: feature.id,
         width: measurements[feature.id]?.width ?? 220,
-        height: measurements[feature.id]?.height ?? (configuration ? 126 : 96),
+        height: measurements[feature.id]?.height ?? 126,
         layer: layerDefinitions[feature.id]?.layer ?? 0,
         layerLabel: layerDefinitions[feature.id]?.label ?? "Features",
         orderHint: `${String(feature.sortOrder).padStart(5, "0")}:${feature.name}`
@@ -107,16 +109,27 @@ export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature
         primary: false
       }))
     ]
-  }), [configuration, containmentModels, layerDefinitions, layoutMode, measurements, project.featureConstraints, project.featureGroups, project.features]);
+  }), [containmentModels, layerDefinitions, layoutMode, measurements, project.featureConstraints, project.featureGroups, project.features]);
   const automaticLayout = useLayeredLayout(layoutRequest, layoutRevision);
+  const manualLayout = useMemo(() => routeManualLayout(layoutRequest, Object.fromEntries([
+    ...project.features.map((feature, index) => [
+      feature.id,
+      feature.graphPosition ?? automaticLayout.positions[feature.id] ?? { x: (index % 4) * 260, y: Math.floor(index / 4) * 150 }
+    ] as const),
+    ...project.featureGroups.map((group, index) => [
+      `group:${group.id}`,
+      group.graphPosition ?? automaticLayout.positions[`group:${group.id}`] ?? { x: (index % 3) * 300 + 80, y: 560 + Math.floor(index / 3) * 130 }
+    ] as const)
+  ])), [automaticLayout.positions, layoutRequest, project.featureGroups, project.features]);
+  const activeLayout = layoutMode === "manual" ? manualLayout : automaticLayout;
 
   useEffect(() => {
-    if (layoutMode === "manual") return;
+    if (layoutMode === "manual" || denseGraph) return;
     const frame = requestAnimationFrame(() => flowInstance.current?.fitView({ padding: 0.16, duration: 250 }));
     return () => cancelAnimationFrame(frame);
-  }, [automaticLayout, layoutMode]);
+  }, [automaticLayout, denseGraph, layoutMode]);
 
-  const bandNodes: Node[] = layoutMode === "manual" ? [] : automaticLayout.bands.map((band, index) => ({
+  const bandNodes: Node[] = layoutMode === "manual" ? [] : activeLayout.bands.map((band, index) => ({
     id: `__feature-${band.id}`,
     type: "group",
     position: { x: band.x, y: band.y },
@@ -142,11 +155,17 @@ export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature
     return {
       id: feature.id,
       type: "featureGraphNode",
-      position: (layoutMode !== "manual" ? automaticLayout.positions[feature.id] : feature.graphPosition)
-        ?? automaticLayout.positions[feature.id]
+      position: activeLayout.positions[feature.id]
+        ?? feature.graphPosition
         ?? { x: (index % 4) * 260, y: Math.floor(index / 4) * 150 },
       data: {
-        content: <div className="min-w-44 text-left">
+        content: <div className="min-w-44 text-left" onClick={(event) => {
+          event.stopPropagation();
+          setGraphSelectedFeatureId(feature.id);
+        }} onDoubleClick={(event) => {
+          event.stopPropagation();
+          onSelectFeature?.(feature);
+        }}>
           <div className="text-[10px] font-bold uppercase tracking-wide text-blue-700">Feature · {feature.featureType}</div>
           <div className="font-semibold">{feature.name}</div>
           <div className="mt-1 text-[10px] text-slate-500">{feature.valueType === "enumeration" ? feature.allowedValues?.join(" / ") : "Boolean"} · {feature.variabilityScope ?? "external"}</div>
@@ -162,19 +181,20 @@ export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature
         </div>,
         accessibleLabel: `Feature: ${feature.name}`,
         width: 220,
-        minimumHeight: configuration ? 126 : 96,
+        minimumHeight: 126,
         variant: "feature",
-        borderColor: selectedFeatureId === feature.id ? "#1d4ed8" : invalid ? "#dc2626" : selected ? "#2563eb" : "#93c5fd",
+        borderColor: graphSelectedFeatureId === feature.id ? "#1d4ed8" : invalid ? "#dc2626" : selected ? "#2563eb" : "#93c5fd",
         background: invalid ? "#fef2f2" : selected ? "#eff6ff" : "white",
-        onMeasure: reportMeasurement
+        onMeasure: reportMeasurement,
+        ports: activeLayout.nodePorts[feature.id] ?? []
       } satisfies MeasuredGraphNodeData
     };
-  }), [automaticLayout.positions, configuration, invalidFeatureIds, layoutMode, onToggleFeature, project.features, readOnly, reportMeasurement, selectedFeatureId]);
+  }), [activeLayout.nodePorts, activeLayout.positions, configuration, graphSelectedFeatureId, invalidFeatureIds, onSelectFeature, onToggleFeature, project.features, readOnly, reportMeasurement]);
   const groupNodes: Node[] = useMemo(() => project.featureGroups.map((group, index) => ({
     id: `group:${group.id}`,
     type: "featureGraphNode",
-    position: (layoutMode !== "manual" ? automaticLayout.positions[`group:${group.id}`] : group.graphPosition)
-      ?? automaticLayout.positions[`group:${group.id}`]
+    position: activeLayout.positions[`group:${group.id}`]
+      ?? group.graphPosition
       ?? { x: (index % 3) * 300 + 80, y: 560 + Math.floor(index / 3) * 130 },
     data: {
       content: <div className="min-w-44 text-left">
@@ -189,40 +209,49 @@ export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature
       borderColor: "#8b5cf6",
       borderStyle: "dashed",
       background: "#faf5ff",
-      onMeasure: reportMeasurement
+      onMeasure: reportMeasurement,
+      ports: activeLayout.nodePorts[`group:${group.id}`] ?? []
     } satisfies MeasuredGraphNodeData
-  })), [automaticLayout.positions, layoutMode, project.featureGroups, project.features, reportMeasurement]);
+  })), [activeLayout.nodePorts, activeLayout.positions, project.featureGroups, project.features, reportMeasurement]);
   const horizontal = layoutMode === "horizontal";
-  const containmentEdges: Edge[] = containmentModels.map((edge) => ({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    sourcePosition: horizontal ? Position.Right : Position.Bottom,
-    targetPosition: horizontal ? Position.Left : Position.Top,
-    sourceHandle: graphPortId("source", horizontal ? Position.Right : Position.Bottom),
-    targetHandle: graphPortId("target", horizontal ? Position.Left : Position.Top),
-    label: layoutMode !== "manual" ? undefined : edge.label,
-    type: layoutMode !== "manual" ? "routed" : "smoothstep",
-    data: layoutMode !== "manual" ? { points: automaticLayout.routes[edge.id], label: edge.label, primary: true } satisfies RoutedEdgeData : undefined,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#64748b", width: 14, height: 14 },
-    style: { stroke: "#64748b", strokeWidth: 1.7, strokeDasharray: edge.label === "organizes" ? "5 4" : undefined },
-    labelStyle: { fontSize: 9, fill: "#64748b" }
-  }));
-  const constraintEdges: Edge[] = showConstraints ? project.featureConstraints.map((constraint) => ({
-    id: constraint.id,
-    source: constraint.sourceFeatureId,
-    target: constraint.targetFeatureId,
-    sourcePosition: horizontal ? Position.Right : Position.Bottom,
-    targetPosition: horizontal ? Position.Left : Position.Top,
-    sourceHandle: graphPortId("source", horizontal ? Position.Right : Position.Bottom),
-    targetHandle: graphPortId("target", horizontal ? Position.Left : Position.Top),
-    label: layoutMode !== "manual" ? undefined : constraint.type,
-    type: layoutMode !== "manual" ? "routed" : "smoothstep",
-    data: layoutMode !== "manual" ? { points: automaticLayout.routes[constraint.id], label: constraint.type, primary: false } satisfies RoutedEdgeData : undefined,
-    markerEnd: { type: MarkerType.ArrowClosed, color: constraint.type === "requires" ? "#16a34a" : "#dc2626" },
-    style: { stroke: constraint.type === "requires" ? "#16a34a" : "#dc2626", strokeWidth: 2.5 },
-    labelStyle: { fontSize: 10, fontWeight: 700, fill: constraint.type === "requires" ? "#15803d" : "#b91c1c" }
-  })) : [];
+  const containmentEdges: Edge[] = containmentModels.map((edge) => {
+    const ports = activeLayout.edgePorts[edge.id];
+    const sourcePosition = ports ? graphPositionForSide(ports.source.side) : horizontal ? Position.Right : Position.Bottom;
+    const targetPosition = ports ? graphPositionForSide(ports.target.side) : horizontal ? Position.Left : Position.Top;
+    return {
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      sourcePosition,
+      targetPosition,
+      sourceHandle: ports?.source.id ?? graphPortId("source", sourcePosition),
+      targetHandle: ports?.target.id ?? graphPortId("target", targetPosition),
+      type: "routed",
+      data: { points: activeLayout.routes[edge.id], label: edge.label, primary: true } satisfies RoutedEdgeData,
+      markerEnd: { type: MarkerType.ArrowClosed, color: "#64748b", width: 14, height: 14 },
+      style: { stroke: "#64748b", strokeWidth: 1.7, strokeDasharray: edge.label === "organizes" ? "5 4" : undefined },
+      labelStyle: { fontSize: 9, fill: "#64748b" }
+    };
+  });
+  const constraintEdges: Edge[] = showConstraints ? project.featureConstraints.map((constraint) => {
+    const ports = activeLayout.edgePorts[constraint.id];
+    const sourcePosition = ports ? graphPositionForSide(ports.source.side) : horizontal ? Position.Right : Position.Bottom;
+    const targetPosition = ports ? graphPositionForSide(ports.target.side) : horizontal ? Position.Left : Position.Top;
+    return {
+      id: constraint.id,
+      source: constraint.sourceFeatureId,
+      target: constraint.targetFeatureId,
+      sourcePosition,
+      targetPosition,
+      sourceHandle: ports?.source.id ?? graphPortId("source", sourcePosition),
+      targetHandle: ports?.target.id ?? graphPortId("target", targetPosition),
+      type: "routed",
+      data: { points: activeLayout.routes[constraint.id], label: constraint.type, primary: false } satisfies RoutedEdgeData,
+      markerEnd: { type: MarkerType.ArrowClosed, color: constraint.type === "requires" ? "#16a34a" : "#dc2626" },
+      style: { stroke: constraint.type === "requires" ? "#16a34a" : "#dc2626", strokeWidth: 2.5 },
+      labelStyle: { fontSize: 10, fontWeight: 700, fill: constraint.type === "requires" ? "#15803d" : "#b91c1c" }
+    };
+  }) : [];
   const groupSubtree = (groupId: string) => {
     const ids = new Set([groupId]);
     let changed = true;
@@ -303,21 +332,16 @@ export function FeatureGraph({ configuration, invalidFeatureIds, onToggleFeature
         flowInstance.current = instance;
       }}
       onConnect={onConnect}
-      onNodeClick={(_, node) => {
-        if (!node.id.startsWith("group:") && !node.id.startsWith("__feature-band:")) {
-          const feature = project.features.find((candidate) => candidate.id === node.id);
-          if (feature) onSelectFeature?.(feature);
-        }
-      }}
       onNodeDragStop={(_, node) => {
         if (readOnly || layoutMode !== "manual") return;
         if (node.id.startsWith("group:")) updateFeatureGroup(node.id.slice(6), { graphPosition: node.position });
         else updateFeature(node.id, { graphPosition: node.position });
       }}
       nodesDraggable={!readOnly && layoutMode === "manual"}
-      fitView
+      fitView={!denseGraph}
       fitViewOptions={{ padding: 0.16 }}
-      minZoom={0.12}
+      defaultViewport={denseGraph ? { x: 20, y: 20, zoom: 0.7 } : undefined}
+      minZoom={denseGraph ? 0.32 : 0.12}
       maxZoom={1.8}
     >
       <Background gap={24} size={1} color="#e2e8f0" />
