@@ -10,7 +10,7 @@ import {
   type Node,
   type ReactFlowInstance
 } from "@xyflow/react";
-import { RefreshCw, Save, Trash2, X } from "lucide-react";
+import { Maximize2, Minimize2, Minus, Plus, RefreshCw, RotateCcw, Save, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { isPrimaryHierarchyRelationship, semanticElementLayers, type LayeredLayoutRequest } from "../domain/modelGraphV04Layouts";
 import type { ContextConnection } from "../domain/contextConnections";
@@ -22,9 +22,16 @@ import { useNodeMeasurements } from "../hooks/useNodeMeasurements";
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { graphPortId, ModelGraphNode, type MeasuredGraphNodeData } from "./MeasuredGraphNodes";
 import { ModelGraphV04Edge, type ModelGraphV04EdgeData } from "./ModelGraphV04Edge";
-import { ModelWorkflowOverview } from "./GraphReadabilityOverview";
+import { ModelWorkflowOverview, type WorkflowOverviewHandle, type WorkflowOverviewState } from "./GraphReadabilityOverview";
 import { contextConnections } from "../domain/contextConnections";
 import { useDialogs } from "./dialogs/DialogProvider";
+
+const layoutModeLabels: Record<GraphLayoutMode, string> = {
+  manual: "Manual positions",
+  hierarchy: "Automatic hierarchy",
+  horizontal: "Left-to-right hierarchy",
+  sequence: "Sequence stages"
+};
 
 type GraphDensity = "compact" | "detailed";
 type RelationshipView = "structure" | "all" | "selection";
@@ -54,11 +61,15 @@ const modelNodeHeight = (
 };
 
 export function ModelGraph({
+  title,
+  subtitle,
   elements,
   relationships,
   contextRelationships = [],
   sequence,
   layoutMode = sequence ? "sequence" : "hierarchy",
+  layoutModeOptions,
+  onLayoutModeChange,
   layoutKey = sequence?.id ?? "model",
   scopedElementIds,
   readOnly = false,
@@ -73,11 +84,15 @@ export function ModelGraph({
   onRelationshipDoubleClick,
   onConnectionRequest
 }: {
+  title?: string;
+  subtitle?: string;
   elements: ModelElement[];
   relationships: Relationship[];
   contextRelationships?: ContextConnection[];
   sequence?: FunctionSequence;
   layoutMode?: GraphLayoutMode;
+  layoutModeOptions?: GraphLayoutMode[];
+  onLayoutModeChange?: (mode: GraphLayoutMode) => void;
   layoutKey?: string;
   scopedElementIds?: Set<string>;
   readOnly?: boolean;
@@ -107,6 +122,10 @@ export function ModelGraph({
   const [presentation, setPresentation] = useState<GraphPresentation>(() => overviewEnabled && (elements.length >= 24 || relationships.length + contextRelationships.length >= 40) ? "overview" : "canvas");
   const [graphSelectedElementId, setGraphSelectedElementId] = useState<string | null>(null);
   const [layoutRevision, setLayoutRevision] = useState(0);
+  const overviewRef = useRef<WorkflowOverviewHandle>(null);
+  const [overviewState, setOverviewState] = useState<WorkflowOverviewState>({ hasSelection: false, zoomPercent: 100, isFullscreen: false });
+  const missionName = project.elements.find((element) => element.elementType === "mission")?.name;
+  const systemName = project.elements.find((element) => element.elementType === "system")?.name;
   const { measurements, reportMeasurement } = useNodeMeasurements();
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>();
   const flowInstance = useRef<ReactFlowInstance>();
@@ -391,15 +410,32 @@ export function ModelGraph({
 
   if (!elements.length) return <div className={`grid ${heightClass} place-items-center text-slate-500`}>No elements match the current filters.</div>;
   const selectedRelationship = project.relationships.find((relationship) => relationship.id === selectedRelationshipId);
+  const inOverview = presentation === "overview" && overviewEnabled;
   return (
     <div aria-label="Model navigation graph">
+      {(title || subtitle || missionName || systemName) && <div className="border-b border-slate-200 p-4">
+        {title && <h2 className="font-bold">{title}</h2>}
+        {(missionName || systemName) && <p className="mt-1 text-xs font-semibold text-slate-600">{missionName && <>Mission: {missionName}</>}{missionName && systemName && " · "}{systemName && <>System of interest: {systemName}</>}</p>}
+        {subtitle && <p className="mt-1 text-xs text-slate-500">{subtitle}</p>}
+      </div>}
       <div className="flex flex-wrap items-end gap-3 border-b border-slate-200 bg-white px-4 py-3">
+        {layoutModeOptions && <label className="w-48"><span className="label">Layout</span><select className="field" value={layoutMode} onChange={(event) => onLayoutModeChange?.(event.target.value as GraphLayoutMode)}>{layoutModeOptions.map((mode) => <option value={mode} key={mode}>{layoutModeLabels[mode]}</option>)}</select></label>}
         {overviewEnabled && <label className="w-40"><span className="label">Presentation</span><select aria-label="Graph presentation" className="field" value={presentation} onChange={(event) => { const next = event.target.value as GraphPresentation; if (next === "overview" && relationshipView === "selection") setRelationshipView("structure"); setPresentation(next); }}><option value="overview">Workflow overview</option><option value="canvas">Full graph</option></select></label>}
         {presentation === "canvas" && <label className="w-40"><span className="label">Relationships</span><select aria-label="Graph relationships" className="field" value={relationshipView} onChange={(event) => setRelationshipView(event.target.value as RelationshipView)}><option value="structure">Primary structure</option><option value="all">All relationships</option><option value="selection">Selected element</option></select></label>}
         {presentation === "canvas" && allowDetailed && <label className="w-32"><span className="label">Card detail</span><select aria-label="Graph card detail" className="field" value={density} onChange={(event) => setDensity(event.target.value as GraphDensity)}><option value="compact">Compact</option><option value="detailed">Detailed</option></select></label>}
         {presentation === "canvas" && <button className="btn" disabled={layoutMode === "manual"} onClick={() => setLayoutRevision((current) => current + 1)}><RefreshCw size={14} /> Auto-arrange</button>}
+        {inOverview && <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button className="btn text-xs" disabled={!overviewState.hasSelection} onClick={() => overviewRef.current?.clearSelection()}><RotateCcw size={13} /> Clear selection</button>
+          {overviewState.isFullscreen && <div className="flex items-center gap-1" aria-label="Graph navigation and zoom">
+            <button className="btn text-xs" aria-label="Zoom out" onClick={() => overviewRef.current?.zoomOut()}><Minus size={13} /></button>
+            <span className="min-w-12 text-center text-xs">{overviewState.zoomPercent}%</span>
+            <button className="btn text-xs" aria-label="Zoom in" onClick={() => overviewRef.current?.zoomIn()}><Plus size={13} /></button>
+            <button className="btn text-xs" onClick={() => overviewRef.current?.fitGraph()}>Fit graph</button>
+          </div>}
+          <button className="btn text-xs" onClick={() => overviewRef.current?.toggleFullscreen()}>{overviewState.isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {overviewState.isFullscreen ? "Exit full screen" : "Full screen"}</button>
+        </div>}
       </div>
-      {presentation === "overview" && overviewEnabled ? <ModelWorkflowOverview elements={project.elements} connections={overviewRelationships} projectId={project.id} selectionKey={`${project.id}:${layoutKey}`} heightClass={heightClass} onElementDoubleClick={(id) => { selectElement(id); onElementDoubleClick?.(id); }} /> : <div className={`relative ${heightClass}`}>
+      {inOverview ? <ModelWorkflowOverview ref={overviewRef} elements={project.elements} connections={overviewRelationships} projectId={project.id} selectionKey={`${project.id}:${layoutKey}`} heightClass={heightClass} onElementDoubleClick={(id) => { selectElement(id); onElementDoubleClick?.(id); }} onStateChange={setOverviewState} /> : <div className={`relative ${heightClass}`}>
         <ReactFlow
           nodes={nodes}
           edges={edges}

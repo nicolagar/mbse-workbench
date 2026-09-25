@@ -164,9 +164,13 @@ describe("measured semantic graph components", () => {
     const project = useAppStore.getState().projects[0];
     render(<DialogProvider><ModelGraph elements={project.elements} relationships={project.relationships} readOnly heightClass="h-[500px]" /></DialogProvider>);
 
+    const mission = project.elements.find((element) => element.elementType === "mission")!;
+    const system = project.elements.find((element) => element.elementType === "system")!;
     expect(screen.queryByRole("heading", { name: "Selectable workflow overview" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Mission" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "System of Interest" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Mission" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "System of Interest" })).not.toBeInTheDocument();
+    expect(screen.getByText(`Mission: ${mission.name}`, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(`System of interest: ${system.name}`, { exact: false })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Requirements" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Full screen" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Element focus" })).not.toBeInTheDocument();
@@ -192,7 +196,8 @@ describe("measured semantic graph components", () => {
     const project = useAppStore.getState().projects[0];
     render(<DialogProvider><ModelGraph elements={project.elements.filter((element) => element.elementType === "stakeholder")} relationships={[]} workflowOverview /></DialogProvider>);
     fireEvent.change(screen.getByRole("combobox", { name: "Graph presentation" }), { target: { value: "overview" } });
-    expect(screen.getByTestId("workflow-overview-surface").querySelectorAll("[data-overview-element]")).toHaveLength(project.elements.length);
+    const nonRootElementCount = project.elements.filter((element) => element.elementType !== "mission" && element.elementType !== "system").length;
+    expect(screen.getByTestId("workflow-overview-surface").querySelectorAll("[data-overview-element]")).toHaveLength(nonRootElementCount);
     expect(screen.queryByRole("button", { name: /^Select .*Mission/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Expand selected downstream in Context" })).toBeDisabled();
   });

@@ -136,6 +136,7 @@ function KpiTable() {
   const [kpiObjectiveId, setKpiObjectiveId] = useState("");
   const [kpiFormula, setKpiFormula] = useState("");
   const [createError, setCreateError] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const formulaKpi = project.kpis.find((kpi) => kpi.id === formulaEditorId);
   const parameterTokens = project.elements.flatMap((element) => element.parameters.map((parameter) => ({
     id: parameter.id,
@@ -168,7 +169,7 @@ function KpiTable() {
     const now = new Date().toISOString();
     const id = `kpi-${crypto.randomUUID()}`;
     addKpi({ id, name, description: "", objectiveIds: kpiObjectiveId ? [kpiObjectiveId] : [], calculationMode: kpiMode, formula: kpiMode === "formula" ? kpiFormula : undefined, standardAlgorithmKey: kpiMode === "standardAlgorithm" ? kpiAlgorithm : undefined, outputUnit: kpiUnit.trim(), optimizationDirection: kpiDirection, weight: kpiWeight, inputParameterIds: references.parameterIds, dependsOnKpiIds: references.kpiIds, calculationWarnings: [], createdAt: now, updatedAt: now });
-    setKpiName(""); setKpiFormula(""); setCreateError("");
+    setKpiName(""); setKpiFormula(""); setCreateError(""); setShowCreateForm(false);
   };
   const edit = async (kpi: KPI) => {
     if (kpi.calculationMode === "formula") {
@@ -191,8 +192,8 @@ function KpiTable() {
     const value = calculation.results.find((result) => result.kpiId === kpi.id);
     void alertUser(calculation.errors.length ? calculation.errors.join("\n") : `${kpi.name}: ${value?.value ?? "Not available"} ${value?.unit ?? kpi.outputUnit}\n${value?.warnings.join("\n") ?? ""}`);
   };
-  return <section className="card p-5"><div><h2 className="text-lg font-bold">KPI definitions</h2><p className="text-sm text-slate-500">Formula references are exact stable IDs; no display-name matching or dynamic JavaScript is used.</p></div>
-    <div className="mt-4 rounded-xl border border-slate-200 p-4"><h3 className="font-bold">Create KPI</h3>
+  return <section className="card p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-bold">KPI definitions</h2><p className="text-sm text-slate-500">Formula references are exact stable IDs; no display-name matching or dynamic JavaScript is used.</p></div>{!showCreateForm && <button className="btn btn-primary" onClick={() => setShowCreateForm(true)}><Plus size={15} /> KPI</button>}</div>
+    {showCreateForm && <div className="mt-4 rounded-xl border border-slate-200 p-4"><div className="flex items-start justify-between gap-2"><h3 className="font-bold">Create and select KPI</h3><button className="btn" onClick={() => { setShowCreateForm(false); setCreateError(""); }}>Close</button></div>
       <div className="mt-3 grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
         <label><span className="label">KPI name</span><input className="field" value={kpiName} onChange={(event) => setKpiName(event.target.value)} /></label>
         <label><span className="label">Calculation method</span><select className="field" value={kpiMode} onChange={(event) => setKpiMode(event.target.value as KPI["calculationMode"])}><option value="formula">Formula</option><option value="standardAlgorithm">Standard algorithm</option></select></label>
@@ -205,7 +206,7 @@ function KpiTable() {
       {kpiMode === "formula" && <div className="mt-4"><KpiFormulaBuilder project={project} value={kpiFormula} onDraftChange={setKpiFormula} onSave={(formula) => { setKpiFormula(formula); setCreateError(""); }} /></div>}
       {createError && <p role="alert" className="mt-2 text-sm text-red-700">{createError}</p>}
       <button className="btn btn-primary mt-4" onClick={create}><Plus size={15} /> Create KPI</button>
-    </div>
+    </div>}
     {formulaKpi && <div className="mt-4 rounded-xl border border-purple-200 bg-purple-50 p-4"><div className="flex justify-between"><div><h3 className="font-bold">Formula editor · {formulaKpi.name}</h3><p className="text-xs text-slate-600">Search the canonical model and insert exact immutable reference tokens.</p></div><button className="btn" onClick={() => setFormulaEditorId("")}>Close</button></div>
       <textarea className="field mt-3 min-h-24 font-mono" value={formulaDraft} onChange={(event) => setFormulaDraft(event.target.value)} />
       <div className="mt-3 grid grid-cols-[260px_1fr] gap-3 max-md:grid-cols-1"><input className="field" value={tokenSearch} onChange={(event) => setTokenSearch(event.target.value)} placeholder="Search parameters and KPIs" /><div className="flex max-h-32 flex-wrap gap-2 overflow-auto">{matchingTokens.map((item) => <button className="btn bg-white" key={`${item.token}-${item.id}`} title={item.token} onClick={() => setFormulaDraft((draft) => `${draft}${draft && !/[\s(,+\-*/]$/.test(draft) ? " " : ""}${item.token}`)}>{item.label}<code className="ml-1 text-[10px]">{item.token}</code></button>)}</div></div>

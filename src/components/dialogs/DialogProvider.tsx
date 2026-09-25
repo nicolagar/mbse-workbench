@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export interface ConfirmOptions {
   title?: string;
@@ -109,9 +110,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   return (
     <DialogsContext.Provider value={{ confirm, promptText, alertUser }}>
       {children}
-      {pending && (
+      {pending && createPortal(
         <div
-          className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/40 p-4"
+          className="fixed inset-0 z-[110] grid place-items-center bg-slate-950/40 p-4"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target !== event.currentTarget) return;
@@ -155,7 +156,8 @@ export function DialogProvider({ children }: { children: ReactNode }) {
               </button>
             </div>
           </section>
-        </div>
+        </div>,
+        document.body
       )}
     </DialogsContext.Provider>
   );

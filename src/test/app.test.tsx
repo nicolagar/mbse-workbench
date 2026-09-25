@@ -291,7 +291,8 @@ describe("application shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Parameters and KPIs" }));
     fireEvent.click(screen.getByRole("button", { name: "KPI definitions" }));
     const prompt = vi.spyOn(window, "prompt");
-    const form = screen.getByRole("heading", { name: "Create KPI" }).parentElement!;
+    fireEvent.click(screen.getByRole("button", { name: "KPI" }));
+    const form = screen.getByRole("heading", { name: "Create and select KPI" }).parentElement!.parentElement!;
     fireEvent.change(within(form).getByLabelText("KPI name"), { target: { value: "Review KPI" } });
     fireEvent.change(within(form).getByLabelText("Calculation method"), { target: { value: "standardAlgorithm" } });
     fireEvent.change(within(form).getByLabelText("Output unit"), { target: { value: "kg" } });

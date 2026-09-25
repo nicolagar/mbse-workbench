@@ -1,5 +1,5 @@
-import { ArrowLeft, ArrowRight, Check, Maximize2, Minimize2, Minus, Plus, RotateCcw } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { ElementType, ModelElement, RelationshipType } from "../domain/types";
 
 export interface ReadableGraphConnection {
@@ -118,14 +118,29 @@ let sessionProjectId: string | undefined;
 const elementTypeName = (elementType: ElementType) => elementType.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (letter) => letter.toUpperCase());
 const seedKey = (seed: WorkflowSelectionSeed) => `${seed.elementId}:${seed.direction}`;
 
-export function ModelWorkflowOverview({ elements, connections, projectId, selectionKey, heightClass, onElementDoubleClick }: {
+export interface WorkflowOverviewHandle {
+  clearSelection: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  fitGraph: () => void;
+  toggleFullscreen: () => void;
+}
+
+export interface WorkflowOverviewState {
+  hasSelection: boolean;
+  zoomPercent: number;
+  isFullscreen: boolean;
+}
+
+export const ModelWorkflowOverview = forwardRef<WorkflowOverviewHandle, {
   elements: ModelElement[];
   connections: ReadableGraphConnection[];
   projectId: string;
   selectionKey: string;
   heightClass: string;
   onElementDoubleClick?: (elementId: string) => void;
-}) {
+  onStateChange?: (state: WorkflowOverviewState) => void;
+}>(function ModelWorkflowOverview({ elements, connections, projectId, selectionKey, heightClass, onElementDoubleClick, onStateChange }, forwardedRef) {
   const [seeds, setSeeds] = useState<WorkflowSelectionSeed[]>(() => {
     if (sessionProjectId !== projectId) {
       sessionSelections.clear();
@@ -232,9 +247,13 @@ export function ModelWorkflowOverview({ elements, connections, projectId, select
       const targetArea = workflowAreaForElementType(elements.find((element) => element.id === visualTargetId)!.elementType);
       const fromRequirements = sourceArea === requirementAreaId && targetArea !== "verification";
       const intoRequirements = targetArea === requirementAreaId && sourceArea !== "verification";
+      const verificationPair = sourceArea === "verification" && targetArea === requirementAreaId;
       const fromRoot = rootAreaIds.has(sourceArea) && !rootAreaIds.has(targetArea);
-      const sourceSide: Side = fromRequirements ? "top" : intoRequirements ? "right" : fromRoot ? "bottom" : dx >= 0 ? "right" : "left";
-      const targetSide: Side = fromRequirements ? "left" : intoRequirements ? "top" : fromRoot ? "top" : dx >= 0 ? "left" : "right";
+      // Requirements sit directly left of Verification in the upper row, so this pair
+      // uses a fixed side each: the requirement's right edge, the method's left edge -
+      // never the generic dx-based side used for every other cross-area pair.
+      const sourceSide: Side = verificationPair ? "left" : fromRequirements ? "top" : intoRequirements ? "right" : fromRoot ? "bottom" : dx >= 0 ? "right" : "left";
+      const targetSide: Side = verificationPair ? "right" : fromRequirements ? "left" : intoRequirements ? "top" : fromRoot ? "top" : dx >= 0 ? "left" : "right";
       return [{ connection, source, target, sourceCenter, targetCenter, sourceArea, targetArea, sourceSide, targetSide }];
     });
     const endpointGroups = new Map<string, Endpoint[]>();
@@ -261,10 +280,54 @@ export function ModelWorkflowOverview({ elements, connections, projectId, select
     };
     const areaRects = new Map([...areaRefs.current].map(([id, node]) => [id, node.getBoundingClientRect()]));
     const requirementsTop = areaRects.get(requirementAreaId)?.top ?? base.bottom;
-    const upperBottom = Math.max(...[...areaRects].filter(([id]) => id !== requirementAreaId && id !== "verification").map(([, rect]) => rect.bottom), base.top);
-    const upperTop = Math.min(...[...areaRects].filter(([id]) => !rootAreaIds.has(id) && id !== requirementAreaId && id !== "verification").map(([, rect]) => rect.top), base.top);
+    const upperBottom = Math.max(...[...areaRects].filter(([id]) => id !== requirementAreaId).map(([, rect]) => rect.bottom), base.top);
+    const upperTop = Math.min(...[...areaRects].filter(([id]) => !rootAreaIds.has(id) && id !== requirementAreaId).map(([, rect]) => rect.top), base.top);
     const rootBottom = Math.max(...[...areaRects].filter(([id]) => rootAreaIds.has(id)).map(([, rect]) => rect.bottom), base.top);
-    setEdgePaths(descriptors.map(({ connection, source, target, sourceArea, targetArea, sourceSide, targetSide }, index) => {
+
+    // A channel is a shared visual resource (a gutter beside one area's edge, or the
+    // open strip between two adjacent areas) that several connectors may need to pass
+    // through at once. Connectors sharing a channel must fan out across it; connectors
+    // that do not share one must never be offset by each other's presence - that
+    // mismatch (a single global counter instead of a per-channel one) was what made
+    // unrelated connectors collide into solid bars while spacing apart unrelated ones.
+    type Kind = "reqOut" | "reqIn" | "root" | "verifyToReq" | "closePair" | "skip";
+    const centerX = (rect: DOMRect) => (rect.left + rect.right) / 2 / inverseScale;
+    const classified = descriptors.map((descriptor) => {
+      const { sourceArea, targetArea, source, target } = descriptor;
+      const closeEnough = Math.abs(centerX(source) - centerX(target)) < 300;
+      const kind: Kind =
+        sourceArea === "verification" && targetArea === requirementAreaId ? "verifyToReq"
+        : sourceArea === requirementAreaId && targetArea !== "verification" ? "reqOut"
+        : targetArea === requirementAreaId && sourceArea !== "verification" ? "reqIn"
+        : rootAreaIds.has(sourceArea) && !rootAreaIds.has(targetArea) ? "root"
+        : sourceArea === targetArea || closeEnough ? "closePair"
+        : "skip";
+      return { ...descriptor, kind };
+    });
+
+    // Assign each connector a (laneIndex, laneCount) within every channel it uses,
+    // grouped by the actual shared resource rather than by array position.
+    const channelMembers = new Map<string, string[]>();
+    const addToChannel = (key: string, connectionId: string) => channelMembers.set(key, [...(channelMembers.get(key) ?? []), connectionId]);
+    const gutterKey = (areaId: WorkflowAreaId, side: "left" | "right") => `gutter:${areaId}:${side}`;
+    const pairKey = (sourceArea: WorkflowAreaId, targetArea: WorkflowAreaId) => `pair:${[sourceArea, targetArea].sort().join("|")}`;
+    classified.forEach(({ connection, kind, sourceArea, targetArea, sourceSide, targetSide }) => {
+      if (kind === "reqOut") addToChannel(gutterKey(targetArea, "left"), connection.id);
+      else if (kind === "reqIn") addToChannel(gutterKey(sourceArea, "right"), connection.id);
+      else if (kind === "verifyToReq") addToChannel(gutterKey(sourceArea, "left"), connection.id);
+      else if (kind === "closePair") addToChannel(pairKey(sourceArea, targetArea), connection.id);
+      else if (kind === "skip") {
+        addToChannel(gutterKey(sourceArea, sourceSide === "left" ? "left" : "right"), connection.id);
+        addToChannel(gutterKey(targetArea, targetSide === "right" ? "right" : "left"), connection.id);
+      }
+    });
+    channelMembers.forEach((ids) => ids.sort());
+    const laneWithin = (key: string, connectionId: string) => {
+      const members = channelMembers.get(key) ?? [connectionId];
+      return { index: Math.max(0, members.indexOf(connectionId)), count: Math.max(1, members.length) };
+    };
+
+    setEdgePaths(classified.map(({ connection, source, target, sourceArea, targetArea, sourceSide, targetSide, kind }) => {
       const start = pointOnSide(source, sourceSide, endpointIndexes.get(`${connection.id}:source`) ?? { index: 0, count: 1 });
       const end = pointOnSide(target, targetSide, endpointIndexes.get(`${connection.id}:target`) ?? { index: 0, count: 1 });
       const local = (point: { x: number; y: number }) => ({ x: (point.x - base.left) / inverseScale, y: (point.y - base.top) / inverseScale });
@@ -272,33 +335,62 @@ export function ModelWorkflowOverview({ elements, connections, projectId, select
       const b = local(end);
       const sourceRect = areaRects.get(sourceArea);
       const targetRect = areaRects.get(targetArea);
-      const gutter = (rect: DOMRect | undefined, side: "left" | "right", lane: number) =>
-        local({ x: (side === "left" ? rect?.left ?? start.x : rect?.right ?? start.x) + (side === "left" ? -1 : 1) * (7 + lane * 0.7), y: start.y }).x;
-      const lane = index % 17;
+      // Outward stacking from the area's edge, bounded to a width that a narrow
+      // Tailwind gap-6 (24px) channel can actually hold without reaching the next
+      // column - a crowded channel packs tighter rather than overflowing.
+      const gutterBudget = 16;
+      const gutter = (rect: DOMRect | undefined, side: "left" | "right", areaId: WorkflowAreaId) => {
+        const { index, count } = laneWithin(gutterKey(areaId, side), connection.id);
+        const spacing = count > 1 ? Math.min(2.2, gutterBudget / (count - 1)) : 0;
+        const edge = side === "left" ? rect?.left ?? start.x : rect?.right ?? start.x;
+        return local({ x: edge + (side === "left" ? -1 : 1) * (6 + index * spacing), y: start.y }).x;
+      };
+      // Centred stacking for the open strip between two areas: no edge to avoid, so
+      // connectors fan out symmetrically around the natural midpoint - but never past
+      // this connector's own endpoints, which mark the real width of that strip.
+      const pairMidpoint = () => {
+        const { index, count } = laneWithin(pairKey(sourceArea, targetArea), connection.id);
+        if (count <= 1) return (a.x + b.x) / 2;
+        const usableWidth = Math.max(2, Math.abs(a.x - b.x) - 8);
+        const spacing = usableWidth / (count - 1);
+        const span = (count - 1) * spacing;
+        return (a.x + b.x) / 2 - span / 2 + index * spacing;
+      };
+      const corridorJitter = (channelKey: string) => Math.min(0.6, 6 / (channelMembers.get(channelKey)?.length ?? 1)) * laneWithin(channelKey, connection.id).index;
       let path: string;
-      if (sourceArea === requirementAreaId && targetArea !== "verification") {
+      if (kind === "reqOut") {
         // Rise from the requirement into the clear band, then use the gap
         // beside the destination environment. No segment crosses an area.
-        const corridor = local({ x: start.x, y: (requirementsTop + upperBottom) / 2 - lane * 0.4 }).y;
-        const channel = gutter(targetRect, "left", lane);
+        const jitter = corridorJitter(gutterKey(targetArea, "left"));
+        const corridor = local({ x: start.x, y: (requirementsTop + upperBottom) / 2 - jitter }).y;
+        const channel = gutter(targetRect, "left", targetArea);
         path = `M ${a.x} ${a.y} V ${corridor} H ${channel} V ${b.y} H ${b.x}`;
-      } else if (targetArea === requirementAreaId && sourceArea !== "verification") {
-        const corridor = local({ x: start.x, y: (requirementsTop + upperBottom) / 2 - lane * 0.4 }).y;
-        const channel = gutter(sourceRect, "right", lane);
+      } else if (kind === "reqIn") {
+        const jitter = corridorJitter(gutterKey(sourceArea, "right"));
+        const corridor = local({ x: start.x, y: (requirementsTop + upperBottom) / 2 - jitter }).y;
+        const channel = gutter(sourceRect, "right", sourceArea);
         path = `M ${a.x} ${a.y} H ${channel} V ${corridor} H ${b.x} V ${b.y}`;
-      } else if (rootAreaIds.has(sourceArea) && !rootAreaIds.has(targetArea)) {
+      } else if (kind === "root") {
         const corridor = local({ x: start.x, y: (rootBottom + upperTop) / 2 }).y;
         path = `M ${a.x} ${a.y} V ${corridor} H ${b.x} V ${b.y}`;
-      } else if (sourceArea === "verification" && targetArea === requirementAreaId) {
-        path = `M ${a.x} ${a.y} H ${(a.x + b.x) / 2} V ${b.y} H ${b.x}`;
-      } else if (sourceArea === targetArea || Math.abs(a.x - b.x) < 300) {
-        path = `M ${a.x} ${a.y} H ${(a.x + b.x) / 2} V ${b.y} H ${b.x}`;
+      } else if (kind === "verifyToReq") {
+        // Mirrors reqIn's shape (own gutter on the narrow side, the wide
+        // Requirements row's own card position on the other) but the method
+        // leaves via its LEFT edge rather than reqIn's usual right edge.
+        const jitter = corridorJitter(gutterKey(sourceArea, "left"));
+        const corridor = local({ x: start.x, y: (requirementsTop + upperBottom) / 2 - jitter }).y;
+        const channel = gutter(sourceRect, "left", sourceArea);
+        path = `M ${a.x} ${a.y} H ${channel} V ${corridor} H ${b.x} V ${b.y}`;
+      } else if (kind === "closePair") {
+        path = `M ${a.x} ${a.y} H ${pairMidpoint()} V ${b.y} H ${b.x}`;
       } else {
         // Skip intermediate environments by using the lower open corridor
         // and the empty vertical gaps alongside the source and destination.
-        const corridor = local({ x: start.x, y: (requirementsTop + upperBottom) / 2 - lane * 0.4 }).y;
-        const departure = gutter(sourceRect, sourceSide === "left" ? "left" : "right", lane);
-        const arrival = gutter(targetRect, targetSide === "right" ? "right" : "left", lane);
+        const departureKey = gutterKey(sourceArea, sourceSide === "left" ? "left" : "right");
+        const arrivalKey = gutterKey(targetArea, targetSide === "right" ? "right" : "left");
+        const corridor = local({ x: start.x, y: (requirementsTop + upperBottom) / 2 - corridorJitter(departureKey) }).y;
+        const departure = gutter(sourceRect, sourceSide === "left" ? "left" : "right", sourceArea);
+        const arrival = gutter(targetRect, targetSide === "right" ? "right" : "left", targetArea);
         path = `M ${a.x} ${a.y} H ${departure} V ${corridor} H ${arrival} V ${b.y} H ${b.x}`;
       }
       return { id: connection.id, path };
@@ -377,13 +469,24 @@ export function ModelWorkflowOverview({ elements, connections, projectId, select
     </section>;
   };
 
-  const rootAreas = workflowAreas.filter((area) => rootAreaIds.has(area.id));
-  const upperAreas = workflowAreas.filter((area) => !rootAreaIds.has(area.id) && area.id !== requirementAreaId && area.id !== "verification");
+  const upperAreas = workflowAreas.filter((area) => !rootAreaIds.has(area.id) && area.id !== requirementAreaId);
   const requirements = areaById.get(requirementAreaId)!;
   const markerId = `workflow-arrow-${selectionKey.replace(/[^a-zA-Z0-9]/g, "-")}`;
 
+  useImperativeHandle(forwardedRef, () => ({
+    clearSelection: () => updateSeeds([]),
+    zoomIn: () => setZoom((value) => Math.min(8, value * 1.25)),
+    zoomOut: () => setZoom((value) => Math.max(0.25, value / 1.25)),
+    fitGraph: fitFullscreen,
+    toggleFullscreen: () => { void toggleFullscreen(); }
+  }), [fitFullscreen, updateSeeds]);
+
+  useEffect(() => {
+    onStateChange?.({ hasSelection, zoomPercent: Math.round(fitScale * zoom * 100), isFullscreen });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSelection, fitScale, zoom, isFullscreen]);
+
   return <div ref={wrapperRef} className={`${fallbackFullscreen ? "fixed inset-0 z-50 bg-white" : "relative"} ${browserFullscreen ? "bg-white" : ""}`}>
-    <div className="flex flex-wrap items-center justify-end gap-2 border-b border-slate-200 bg-white px-4 py-2"><button className="btn text-xs" disabled={!hasSelection} onClick={() => updateSeeds([])}><RotateCcw size={13} /> Clear selection</button>{isFullscreen && <div className="flex items-center gap-1" aria-label="Graph navigation and zoom"><button className="btn text-xs" aria-label="Zoom out" onClick={() => setZoom((value) => Math.max(0.25, value / 1.25))}><Minus size={13} /></button><span className="min-w-12 text-center text-xs">{Math.round(fitScale * zoom * 100)}%</span><button className="btn text-xs" aria-label="Zoom in" onClick={() => setZoom((value) => Math.min(8, value * 1.25))}><Plus size={13} /></button><button className="btn text-xs" onClick={fitFullscreen}>Fit graph</button></div>}<button className="btn text-xs" onClick={toggleFullscreen}>{isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />} {isFullscreen ? "Exit full screen" : "Full screen"}</button></div>
     <div ref={scrollerRef} className={`${isFullscreen ? "h-[calc(100vh-57px)] cursor-grab active:cursor-grabbing" : heightClass} overflow-auto bg-slate-50 p-4`}
       onPointerDown={(event) => { if (!isFullscreen || event.button !== 0 || (event.target as HTMLElement).closest("button")) return; const scroller = scrollerRef.current; if (!scroller) return; panRef.current = { x: event.clientX, y: event.clientY, left: scroller.scrollLeft, top: scroller.scrollTop }; scroller.setPointerCapture?.(event.pointerId); }}
       onPointerMove={(event) => { const pan = panRef.current; const scroller = scrollerRef.current; if (pan && scroller) { scroller.scrollLeft = pan.left + pan.x - event.clientX; scroller.scrollTop = pan.top + pan.y - event.clientY; } }}
@@ -391,10 +494,9 @@ export function ModelWorkflowOverview({ elements, connections, projectId, select
       onWheel={(event) => { if (isFullscreen && event.ctrlKey) { event.preventDefault(); setZoom((value) => Math.min(8, Math.max(0.25, value * (event.deltaY < 0 ? 1.1 : 1 / 1.1)))); } }}>
       <div style={{ zoom: fitScale * zoom } as CSSProperties}><div ref={surfaceRef} className="relative min-w-max space-y-5 p-2" data-testid="workflow-overview-surface">
         <svg aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible"><defs><marker id={markerId} markerHeight="7" markerWidth="7" orient="auto" refX="6" refY="3.5"><path d="M0,0 L7,3.5 L0,7 Z" fill="#15803d" /></marker></defs>{edgePaths.map((edge) => <path d={edge.path} fill="none" key={edge.id} markerEnd={`url(#${markerId})`} stroke="#15803d" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />)}</svg>
-        <div className="relative z-10 mx-auto grid w-[720px] grid-cols-2 gap-6 border-b border-slate-300 pb-5">{rootAreas.map((area) => <Area area={area} key={area.id} />)}</div>
         <div className="relative z-10 flex items-start gap-6">{upperAreas.map((area) => <Area area={area} key={area.id} />)}</div>
-        <div className="relative z-10 flex items-start gap-6 border-t-4 border-dashed border-slate-400 pt-5"><Area area={areaById.get("verification")!} /><Area area={requirements} wide /></div>
+        <div className="relative z-10 flex items-start gap-6 border-t-4 border-dashed border-slate-400 pt-5"><Area area={requirements} wide /></div>
       </div></div>
     </div>
   </div>;
-}
+});
