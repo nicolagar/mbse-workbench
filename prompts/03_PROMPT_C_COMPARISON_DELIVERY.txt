@@ -1,0 +1,967 @@
+# Prompt C — Comparison and Delivery
+
+## Schema-9 Dashboard Steps amendment
+
+This amendment is authoritative wherever the earlier Stage-C text conflicts with it. Preserve older data and delivery fields, but use the simplified workflow for all new interaction and calculations.
+
+- Keep the Dashboard as the left-frame landing page. Its compact Template A project header must create a named project, switch, duplicate and delete.
+- Provide three independent overall scopes: Architecture building; Architecture building + simulation; Trade study. Do not add another Dashboard or Trade Study mode selector.
+- Show only scope-required activities as stacked full-width Problem Space and Solution Space sections. Show section counts, not an overall readiness score.
+- Derive four automatic states from canonical data: grey Not started, blue In progress, green Complete and red Blocked, each with icon and text. Recommend the earliest incomplete or blocked activity.
+- Opening an activity must show its details and exact editor actions. Returning must restore the same Dashboard focus and scroll position.
+- The Trade Study Problem Space sequence is exactly: Define system and intent; Define use-case and requirement scope; Define trade study, variability axes and evaluation KPIs.
+- The Trade Study Solution Space sequence is exactly: Build the 150% architecture; Define feature model and constraints; Map variability to architecture; Create valid configurations; Derive 100% architectures; Simulate architectures; Compare and decide.
+- Problem Space Step 3 is one guided setup. It creates or activates a Trade Study, records the direct decision question, selects existing needs/objectives/active use cases, shows automatically derived requirements, links the single project-wide Root Feature, selects reusable variability axes and creates or edits only the needed canonical KPIs.
+- Store variability axes in one reusable project catalogue. Each axis owns exactly one synchronized major FeatureGroup under the shared Root Feature. Rename both together; block deletion while the group contains features or nested groups.
+- Persist one active Trade Study per project and use it for Dashboard Step 3 and Step 7 status. Show the synchronized selector in Dashboard details and the guided setup.
+- Alternative selection belongs only to Solution Space Step 7, after current derivation and simulation evidence exists.
+- Feature-model constraints are optional when selectable features exist and no feature-model or constraint errors remain.
+- Alternatives must be valid configurations with current saved 100% derivations and current complete simulations tied to those exact derivations. At least two are required.
+- Feasibility comes only from linked requirement formulas. Do not create Trade Study thresholds or KPI direction/weight overrides.
+- KPI formula or algorithm, output unit, direction, weight and objective links are canonical and editable in the guided setup. Missing or stale evidence blocks comparison.
+- Keep requirement-failing alternatives visible with diagnostic scores, but never prefer or approve them.
+- Every selected KPI must be numeric and current for every alternative. Normalize each KPI using feasible alternatives only, then apply that same scale to infeasible diagnostic values.
+- A sole feasible alternative may be selected with an explicit “no competitive feasible ranking” limitation.
+- Manager and Expert views use identical evidence and calculations; Expert exposes more lineage and detail.
+- Approval requires explicit feasible selection, rationale and baseline confirmation, and captures automatic evidence links.
+- Use “simulate architecture(s)” in user-facing workflow language. Do not use “generate simulation evidence”.
+
+Schema-8 projects migrate non-destructively to schema 9. Preserve existing studies and groups, select the first existing study as active, link a sole existing Root Feature, and offer existing FeatureGroups for explicit axis adoption without guessing. Historical Pareto, SMART/MAVT, sensitivity, risk, scenario, robustness and exception records remain readable and exportable, but are not mandatory surfaces or approval inputs for the simplified workflow. Scope, axis or KPI changes preserve immutable results but mark them stale and block approval until refreshed.
+
+## MBSE/MBPLE Web Application — Stage C of A → B → C
+
+ROLE
+
+Act as a senior full-stack software architect, UX designer, systems engineer, and test engineer with expertise in MBSE, MBPLE, SysML-inspired modeling, product/process/resource modeling, feature-based configuration, early-phase pre-sizing, architecture trade studies, browser application architecture, safe expression parsing, data migration, and engineering UX.
+
+GLOBAL PRODUCT RULES
+
+The product is a single-user, browser-based MBSE/MBPLE programme-preparation workbench. It demonstrates simplified digital-thread traceability, product/process/resource modeling, feature-based variability, deterministic 150%-to-100% derivation, preliminary KPI and pre-sizing calculations, architecture/configuration comparison, decisions, snapshots, and selective export.
+
+The product may support small, bounded early-phase engineering studies. It is not:
+- a certified engineering-analysis tool;
+- a professional SysML, PLM, manufacturing-planning, configuration-management, or simulation platform;
+- a regulatory-compliance system;
+- a replacement for detailed physical simulation or verified design substantiation.
+
+Every decision-relevant calculated or simulated result must display:
+
+“Preliminary engineering estimate — not a verified detailed-design result.”
+
+Use:
+- React;
+- TypeScript with strict mode;
+- Vite;
+- Tailwind CSS;
+- React Flow;
+- Recharts where charts are required;
+- Zustand;
+- localStorage;
+- Lucide React;
+- Vitest for domain-engine and migration tests;
+- React Testing Library where focused component tests provide value;
+- a custom safe tokenizer/parser/evaluator for feature and KPI expressions;
+- SheetJS only in Stage C for XLSX export;
+- jsPDF only in Stage C for PDF export.
+
+The application must:
+- run entirely in the browser;
+- require no backend, authentication, cloud service, or external API;
+- make no runtime network calls;
+- use no CDN-hosted assets, fonts, libraries, or icons;
+- remain usable without internet access when run locally after dependencies are installed;
+- preserve one canonical project model and one canonical Zustand store;
+- persist edits in versioned localStorage;
+- restore the active project after browser refresh;
+- validate imported and persisted data defensively;
+- never execute arbitrary user-entered code;
+- never use eval, Function, dynamic script injection, or JavaScript expression execution for user formulas or feature expressions;
+- provide honest empty states, validation messages, warnings, and limitations;
+- contain no non-working mandatory controls;
+- contain no TODO, FIXME, placeholder, mock-only, or “not implemented” behavior for mandatory requirements.
+
+Prioritize, in order:
+1. data integrity and safety;
+2. correct deterministic engineering logic;
+3. backward compatibility;
+4. functional completeness;
+5. transparent validation;
+6. usability and accessibility;
+7. visual polish.
+
+OFFLINE SCOPE
+
+Offline means the application works without internet access when started locally with:
+
+npm run dev
+
+or:
+
+npm run build
+npm run preview
+
+A service worker, installable PWA, and file:// execution are not required. The application must not require internet access after npm dependencies have been installed.
+
+EXECUTION ENVIRONMENT AND DELIVERY
+
+Work directly in the current writable project directory and create or modify actual files. Do not return the implementation as disconnected code snippets. Do not stop after planning or scaffolding.
+
+Use npm as the package manager.
+
+Choose mutually compatible stable dependency versions, pin exact versions in package.json, and generate package-lock.json. Do not use “latest”, caret ranges, or tilde ranges. Record the tested Node.js and npm versions in README.md.
+
+Before completing this stage, run:
+1. npm install
+2. npm run typecheck
+3. npm run test
+4. npm run build
+
+Fix all errors and rerun the commands until all four succeed. Do not claim completion unless they succeed.
+
+Maintain:
+- README.md;
+- CHANGELOG.md;
+- ACCEPTANCE_RESULTS_<STAGE>.md.
+
+For every acceptance test, record:
+- PASS;
+- FAIL;
+- NOT TESTABLE, with explanation.
+
+No mandatory acceptance test may remain FAIL or NOT TESTABLE at final delivery.
+
+At the end of the stage:
+- provide a concise implementation summary;
+- list the exact verification commands and outcomes;
+- state any non-blocking limitations;
+- return the complete runnable project or commit changes to the existing repository;
+- do not provide only a summary of intended changes.
+
+STAGE-C AUTHORITY AND CONTINUITY
+
+This prompt is a backward-compatible completion specification for the existing passing Stage-A-plus-Stage-B repository.
+
+Treat all passing Stage-A and Stage-B behavior as regression requirements.
+
+Do not:
+- rebuild the application;
+- replace working domain engines;
+- create a second project model;
+- create a second store;
+- alter historical simulation values;
+- silently recalculate derived, simulation, or comparison records;
+- discard stored projects;
+- weaken earlier tests.
+
+Extend the application in place.
+
+Stage-C persisted-app schemaVersion = 4.
+Stage-C Project.schemaVersion = 4.
+
+Implement a pure, tested migration from schema 3 to schema 4. It must:
+- preserve projects, IDs, typed features, variation points, configurations, realized derivations, KPI definitions, simulation runs, applied-variation audit data, and validation data;
+- initialize comparisonStudies, comparisonRisks, and final Decision fields;
+- move any legacy project-nested snapshots to PersistedAppState.snapshots without recursive projectData;
+- preserve application-level snapshots;
+- add safe defaults to study-specific KPI settings;
+- preserve unsupported or unknown data in recovery output rather than deleting it;
+- be idempotent;
+- never overwrite invalid raw data.
+
+MISSION
+
+Complete:
+- Comparison and Decisions workspace;
+- Dashboard rollups;
+- named local snapshots;
+- selective JSON export and import;
+- XLSX export;
+- PDF report;
+- accessibility and responsive refinement;
+- final consistency and hardening.
+
+Implement:
+- deterministic comparison;
+- two-to-six alternatives;
+- exact simulation-run references;
+- raw values;
+- normalized scores;
+- data-coverage reporting;
+- weighted scoring;
+- thresholds;
+- grouped bar, radar, and weighted-score charts;
+- assumptions and risks;
+- bounded KPI-weight sensitivity;
+- decisions;
+- snapshots;
+- import/export reference integrity;
+- complete regression and hardening pass.
+
+REGRESSION REQUIREMENT
+
+Run all Stage-A and Stage-B automated tests and acceptance tests. Fix regressions instead of weakening or removing tests.
+
+PROJECT STORAGE
+
+Comparison studies and risks are stored only in:
+- Project.comparisonStudies;
+- Project.comparisonRisks.
+
+Decisions are stored only in:
+- Project.decisions.
+
+Snapshots are stored only in:
+- PersistedAppState.snapshots.
+
+Do not create duplicate stores or nested snapshot copies.
+
+COMPARISON WORKSPACE
+
+Provide tabs:
+1. Study Setup
+2. Side-by-Side
+3. KPI Table
+4. Charts
+5. Assumptions and Risks
+6. Sensitivity
+7. Decision Rationale
+
+Study actions:
+- create;
+- edit;
+- duplicate;
+- delete;
+- select;
+- run;
+- view saved results.
+
+A study:
+- has two to six alternatives;
+- selects KPI IDs;
+- stores study-specific KPI settings;
+- stores timestamped immutable results;
+- may store one latest weight-sensitivity result.
+
+COMPARISON ALTERNATIVE SOURCE RULE
+
+Every alternative must reference exactly one saved SimulationRun.
+
+For architecture-only alternative:
+- SimulationRun.architectureId matches;
+- SimulationRun.configurationId is undefined.
+
+For configured alternative:
+- architectureId matches;
+- configurationId matches;
+- simulationRunId references a run for that exact architecture/configuration pair.
+
+The UI may propose the latest compatible run, but the user must explicitly select or confirm it.
+
+A saved comparison always uses the immutable values of the referenced run. It never silently switches to a newer run.
+
+A KPI value is available only when the referenced SimulationRun contains a finite SimulationResult whose kpiId exactly equals the selected KPI ID. Matching by name is forbidden.
+
+STUDY-SPECIFIC KPI SETTINGS
+
+For every selected KPI, store:
+- weight;
+- optimizationDirection;
+- optional threshold.
+
+Do not modify the global KPI definition when the user changes direction, weight, or threshold in a study.
+
+Use:
+
+```ts
+interface ComparisonThreshold {
+  minimum?: number;
+  maximum?: number;
+  mode: "warning" | "hard";
+}
+
+interface ComparisonKpiSetting {
+  weight: number;
+  optimizationDirection: "minimize" | "maximize";
+  threshold?: ComparisonThreshold;
+}
+```
+
+Rules:
+- weights must be finite and non-negative;
+- at least one selected KPI weight is greater than zero;
+- threshold minimum and maximum are finite when present;
+- minimum must not exceed maximum;
+- show raw weights and normalized weight percentages;
+- retain global KPI direction as the default only when creating a study.
+
+NORMALIZATION
+
+For each KPI, use only finite available values among selected alternatives.
+
+For maximize:
+
+normalized = 100 × (value - minimum) / (maximum - minimum)
+
+For minimize:
+
+normalized = 100 × (maximum - value) / (maximum - minimum)
+
+Rules:
+- clamp rounding artifacts to 0–100;
+- if maximum equals minimum, assign 100 to every alternative with a value;
+- explain that the KPI does not differentiate alternatives;
+- missing values remain Missing, never zero;
+- do not invent values.
+
+WEIGHTED SCORING AND DATA COVERAGE
+
+For each alternative:
+- use only selected KPIs with available normalized values;
+- renormalize applicable weights;
+- weightedScore = sum(score × applicableWeight) / sum(applicableWeight);
+- if no valid values remain, weighted score = Not available.
+
+Calculate:
+
+dataCoveragePercent =
+available selected raw weight / total selected raw weight × 100
+
+Show weighted score together with data coverage.
+
+When alternatives use different KPI subsets:
+- generate PMC-104;
+- show which KPIs are missing;
+- do not present scores as equally complete;
+- do not declare an unqualified leader when a leading score has lower data coverage than another alternative.
+
+Required label:
+
+“Highest calculated score under the selected KPI weights, available data, documented assumptions, and shown data coverage.”
+
+Never label an alternative universally optimal.
+
+TIES
+
+- If multiple alternatives share the highest score within displayed precision, show a tie.
+- Do not arbitrarily select the first alternative.
+- Sensitivity results may report multiple leadingAlternativeIds.
+
+THRESHOLDS
+
+Apply thresholds to raw values:
+- below required minimum = violation;
+- above allowed maximum = violation;
+- warning mode produces a warning;
+- hard mode visually marks the alternative as constraint-violating;
+- hard violations do not hide or delete the alternative;
+- threshold violations appear in setup, tables, side-by-side, charts, decisions, dashboard, and exports.
+
+CHARTS
+
+Use Recharts.
+
+Provide:
+- raw-value grouped bar chart;
+- normalized 0–100 radar chart;
+- weighted-score bar chart.
+
+Raw chart rules:
+- do not mix incompatible units on one unspecified axis;
+- require one KPI or a group of KPIs with identical unit;
+- show units;
+- show missing-data indicators;
+- provide a textual summary.
+
+All charts:
+- descriptive title;
+- legend;
+- tooltip;
+- keyboard-accessible surrounding controls;
+- textual data summary;
+- do not rely on color alone.
+
+SIDE-BY-SIDE
+
+For each alternative show:
+- architecture;
+- configuration;
+- simulation run name and timestamp;
+- run current/stale state;
+- selected features;
+- included/excluded element counts;
+- raw KPI values;
+- normalized scores;
+- weighted score;
+- data coverage;
+- threshold violations;
+- assumptions;
+- warnings;
+- validation error/warning counts;
+- traceability coverage;
+- model completeness;
+- source project revision.
+
+ASSUMPTIONS AND RISKS
+
+Show and edit:
+- project assumptions linked to relevant elements or alternatives;
+- simulation assumptions;
+- missing data;
+- parameter uncertainty percentages;
+- validation warnings;
+- comparison risks.
+
+ComparisonRisk fields:
+- id;
+- comparisonStudyId;
+- alternativeId;
+- title;
+- description;
+- likelihood;
+- impact;
+- mitigation.
+
+Provide:
+- create;
+- edit;
+- duplicate;
+- delete;
+- filter;
+- alternative navigation.
+
+WEIGHT SENSITIVITY
+
+Implement one-factor-at-a-time KPI raw-weight sensitivity only.
+
+For each selected KPI:
+- vary its raw weight from 0% to 200% of current raw weight;
+- increments: 25%;
+- keep all other raw weights unchanged;
+- renormalize;
+- recalculate alternative scores;
+- store all alternative scores;
+- report one or more leaders;
+- report whether leader changes.
+
+When the baseline raw weight is zero:
+- show one constant zero-weight result;
+- explain that percentage variation cannot influence a zero baseline;
+- do not invent a non-zero baseline.
+
+Label:
+“Weight sensitivity”
+
+Do not call it:
+- physical uncertainty;
+- probabilistic simulation;
+- Monte Carlo analysis.
+
+Show:
+- line chart or compact table;
+- score movement;
+- leader changes;
+- warnings;
+- timestamp.
+
+DECISION LOG
+
+Make decisions fully functional.
+
+Actions:
+- create;
+- edit;
+- duplicate;
+- delete;
+- filter;
+- select;
+- detail view.
+
+Decision fields are those defined in Stage A.
+
+“Create decision from comparison” prepopulates:
+- question;
+- alternatives;
+- selected KPI names as criteria;
+- leading alternative or tied alternatives as proposal only;
+- supportingComparisonStudyIds;
+- supportingSimulationRunIds;
+- assumptions;
+- threshold violations;
+- warnings;
+- risks.
+
+Rules:
+- selected alternative remains proposed until user confirmation;
+- user must explicitly confirm or change selection;
+- rationale is required before status can become approved;
+- do not claim automated stakeholder approval.
+
+DASHBOARD COMPLETION
+
+Upgrade Dashboard with live rollups:
+- programme objectives;
+- active architecture;
+- baseline architecture;
+- architecture alternatives;
+- saved configurations;
+- current/stale derivations;
+- latest simulation results;
+- current/stale simulation states;
+- comparison studies;
+- current leading or tied alternatives under selected study;
+- data coverage;
+- assumptions;
+- open decisions and actions;
+- model maturity;
+- traceability;
+- errors and warnings;
+- threshold violations;
+- missing information;
+- deterministic recommended actions.
+
+Recommended actions may include:
+- resolve blocking validation errors;
+- add missing requirement-to-function links;
+- complete feature configuration;
+- update stale derivation;
+- provide missing KPI inputs;
+- run a current simulation;
+- compare at least two alternatives;
+- resolve hard thresholds;
+- document or approve a decision;
+- create a recovery snapshot;
+- export selected results.
+
+MODEL REVISION AND STALE COMPARISON
+
+Simulation run is stale when:
+
+simulationRun.projectModelRevisionAtRun < project.modelRevision
+
+Comparison is stale when:
+- any referenced simulation is stale; or
+- a selected KPI definition has updatedAt later than comparison timestamp; or
+- study settings changed after result timestamp.
+
+Rules:
+- stale results remain viewable and exportable;
+- show explicit warnings;
+- never silently recalculate;
+- user explicitly reruns.
+
+SNAPSHOTS
+
+Snapshots live in PersistedAppState.snapshots and never inside Project.
+
+Actions:
+- create named snapshot with required name and optional note;
+- list by date descending;
+- preview metadata;
+- restore after confirmation;
+- delete after confirmation;
+- duplicate snapshot into a new project.
+
+Snapshot creation:
+- serializes an immutable deep copy of only the source Project;
+- excludes all application snapshots;
+- excludes UI preferences;
+- stores schemaVersion and project name;
+- validates serializability before saving;
+- limits snapshots to 20 per source project unless the user deletes older snapshots or confirms replacement of the oldest.
+
+Restore:
+1. parse snapshot projectData;
+2. validate schema and references;
+3. migrate to current project schema;
+4. create a safety snapshot of current active project;
+5. replace only the active project after confirmation;
+6. preserve other projects;
+7. preserve the complete application snapshot list;
+8. set activeProjectId to the restored project;
+9. do not overwrite if validation fails.
+
+Duplicate snapshot into new project:
+- creates a new project ID;
+- preserves nested model IDs because projects are isolated;
+- generates a unique project name;
+- updates project createdAt and updatedAt;
+- does not copy snapshots.
+
+Corrupt snapshot:
+- show error;
+- provide raw snapshot download;
+- do not overwrite project.
+
+Label snapshots:
+“Basic local snapshots — not enterprise version control.”
+
+SELECTIVE EXPORT WORKSPACE
+
+Filters:
+- complete project or selection;
+- architecture;
+- configuration;
+- model domain;
+- element type;
+- individual elements;
+- feature;
+- relationship type;
+- tag;
+- include/exclude validation results;
+- include/exclude KPI definitions;
+- include/exclude simulation results;
+- include/exclude comparisons;
+- include/exclude decisions.
+
+Before export show:
+- scope summary;
+- filters;
+- item counts;
+- stale-result warnings;
+- relationship-integrity warnings;
+- two choices:
+  1. automatically include relationship endpoints;
+  2. omit incomplete relationships.
+
+REFERENTIAL CLOSURE
+
+When automatically including endpoints:
+- include source and target elements;
+- include owned parameters;
+- repeat closure until no exported relationship references an excluded element.
+
+When omitting:
+- omit relationship if source or target is excluded;
+- record it in export manifest.
+
+Also preserve integrity for:
+- architecture references;
+- parameter owner references;
+- feature parent references;
+- feature constraints;
+- configuration feature IDs;
+- derivation references;
+- simulation references;
+- comparison references;
+- decision references.
+
+Generated JSON must contain no broken reference.
+
+JSON EXPORT
+
+Include:
+- exportPackageVersion;
+- schemaVersion;
+- exportedAt;
+- exported project metadata;
+- filter manifest;
+- omitted-record summary;
+- selected content;
+- stable IDs;
+- valid relationships;
+- readable formatted JSON.
+
+Complete-project export:
+- excludes application-level snapshots;
+- excludes UI preferences;
+- is re-importable without data loss for project content.
+
+JSON IMPORT
+
+Validate:
+- syntax;
+- package version;
+- supported schemaVersion;
+- required project fields;
+- unique IDs within imported project;
+- all internal references;
+- valid enums;
+- finite numeric values where required.
+
+Offer:
+- Import as new project;
+- Replace active project.
+
+Rules:
+- import as new assigns a new project ID only when it would conflict with an existing project ID;
+- nested IDs may remain unchanged because projects are isolated;
+- replacement requires confirmation;
+- create safety snapshot before valid replacement;
+- invalid import changes nothing;
+- show validation summary;
+- retain raw invalid input for user download;
+- never merge partial imported data into an existing project.
+
+XLSX EXPORT
+
+Use SheetJS.
+
+Applicable sheets:
+- Project
+- Architectures
+- Elements
+- Relationships
+- Parameters
+- Features
+- Feature Constraints
+- Configurations
+- KPI Definitions
+- Simulation Results
+- Validation Results
+- Comparison Studies
+- Comparison Results
+- Risks
+- Decisions
+- Assumptions
+- Export Manifest
+
+Rules:
+- one header row;
+- stable IDs;
+- explicit units;
+- arrays serialized clearly or normalized;
+- filters respected;
+- empty optional sheets may be omitted;
+- optional empty data must not crash generation;
+- include stale state and data coverage where relevant.
+
+PDF REPORT
+
+Use jsPDF.
+
+Include:
+- title;
+- generated timestamp;
+- disclaimer;
+- project purpose and objectives;
+- selected architecture/configuration;
+- selected features;
+- model scope;
+- assumptions;
+- open decisions;
+- traceability and quality;
+- KPI definitions and results;
+- simulation inputs, algorithms, assumptions, warnings, and stale state;
+- comparison and weighted-score explanation;
+- data coverage;
+- thresholds;
+- selected decision and rationale;
+- risks and open actions;
+- export scope and filters.
+
+Rules:
+- page breaks;
+- useful repeated header/footer;
+- no clipped text or tables;
+- units;
+- if chart embedding is unreliable, use formatted tables and generate PMC-108;
+- never show preliminary values as certified.
+
+PROMPT-C VALIDATION RULES
+
+Errors:
+- PMC-001 Comparison has fewer than two alternatives.
+- PMC-002 Comparison has more than six alternatives.
+- PMC-003 No KPI selected.
+- PMC-004 All selected KPI weights are zero.
+- PMC-005 Negative or non-finite weight.
+- PMC-006 Referenced alternative, configuration, simulation, or KPI missing.
+- PMC-007 Invalid threshold bounds.
+- PMC-008 Invalid JSON import.
+- PMC-009 Unsupported schema version.
+- PMC-010 Import duplicate IDs or broken references.
+- PMC-011 Snapshot corrupted.
+- PMC-012 Export cannot preserve integrity under selected options.
+- PMC-013 Alternative simulation does not match architecture/configuration.
+- PMC-014 Simulation result lacks exact selected kpiId.
+- PMC-015 Decision approval lacks rationale.
+- PMC-016 Comparison settings are structurally invalid.
+
+Warnings:
+- PMC-101 Alternative missing KPI value.
+- PMC-102 KPI does not differentiate alternatives.
+- PMC-103 Hard threshold violation.
+- PMC-104 Weighted scores use different KPI subsets.
+- PMC-105 Comparison uses stale simulation results.
+- PMC-106 Decision has no rationale.
+- PMC-107 Export omits relationships because endpoints are excluded.
+- PMC-108 PDF uses table instead of unsupported visual.
+- PMC-109 Leading score has incomplete data coverage.
+- PMC-110 Comparison result is stale.
+- PMC-111 Import project ID was changed to avoid collision.
+- PMC-112 Snapshot limit reached.
+
+Information:
+- PMC-201 Leading alternative changed during sensitivity.
+- PMC-202 Alternatives tied for a KPI.
+- PMC-203 Safety snapshot created.
+- PMC-204 Leading alternatives are tied.
+- PMC-205 Zero baseline weight has constant sensitivity.
+
+ACCESSIBILITY AND RESPONSIVENESS
+
+Apply:
+- semantic headings;
+- input labels;
+- keyboard-accessible controls;
+- visible focus;
+- sufficient contrast;
+- text/icon status in addition to color;
+- accessible icon-only button names;
+- correct table headers;
+- descriptive chart titles;
+- textual chart summaries;
+- responsive card and details-panel stacking;
+- primary actions visible at laptop width;
+- no clipped dialogs;
+- error announcements suitable for assistive technology.
+
+FINAL HARDENING
+
+Inspect and fix:
+- TypeScript errors;
+- unresolved imports;
+- invalid state updates;
+- stale derived data;
+- migrations;
+- broken navigation;
+- non-working controls;
+- mismatched IDs;
+- invalid sample references;
+- graph/matrix inconsistencies;
+- feature errors;
+- unsafe formula behavior;
+- critical-path errors;
+- normalization errors;
+- missing-data scoring;
+- snapshot recursion or corruption;
+- import data-loss paths;
+- export crashes;
+- disclaimer omissions;
+- accessibility regressions.
+
+Add in-app Demo Checklist:
+1. Review objectives and assumptions.
+2. Inspect traceability.
+3. Configure a variant.
+4. Derive the 100% model.
+5. Review parameters and KPIs.
+6. Run pre-sizing.
+7. Compare alternatives.
+8. Record a decision.
+9. Create a snapshot.
+10. Export selected results.
+
+SAMPLE PROJECT COMPLETION
+
+Add:
+- current simulation run for Manual Customer Variant;
+- current simulation run for Automated Customer Variant;
+- one saved comparison between those variants;
+- exact simulation references;
+- KPI settings that visibly differentiate alternatives;
+- at least one threshold violation;
+- assumptions and risks for both alternatives;
+- one sensitivity result where leader changes or demonstrably remains stable;
+- one draft decision linked to comparison;
+- one named application-level snapshot;
+- complete exportable data.
+
+Do not hard-code comparison outputs independently. Compute from saved simulation result values.
+
+AUTOMATED TESTS
+
+Run all Stage-A and Stage-B tests and add at minimum:
+- Stage-B-to-Stage-C migration;
+- migration idempotence;
+- nested snapshot migration without recursion;
+- maximize normalization;
+- minimize normalization;
+- equal-value scoring;
+- tie handling;
+- missing-value behavior;
+- alternative-specific weight renormalization;
+- data coverage;
+- threshold warning and hard modes;
+- exact simulation/KPI matching;
+- mismatched alternative rejection;
+- zero-weight sensitivity;
+- sensitivity multipliers;
+- stale comparison;
+- decision approval rationale;
+- snapshot deep-copy behavior;
+- safety snapshot;
+- corrupt snapshot rejection;
+- JSON full-project round trip;
+- invalid-import rollback;
+- project-ID collision handling;
+- export referential closure;
+- omit-incomplete relationship manifest;
+- XLSX empty optional data;
+- PDF generation smoke test.
+
+STAGE-C ACCEPTANCE TESTS
+
+Stage C is complete only if:
+1. All Stage-A and Stage-B behavior remains functional.
+2. Existing schema-3 projects migrate without data loss.
+3. Migration is idempotent.
+4. Comparison studies are stored in Project.comparisonStudies.
+5. Risks are stored in Project.comparisonRisks.
+6. Snapshots exist only at application level.
+7. User can create, edit, duplicate, and delete studies.
+8. Study requires two to six alternatives.
+9. Every alternative references a compatible saved simulation run.
+10. User can select KPIs and edit study-specific weights, directions, and thresholds.
+11. Negative, non-finite, and all-zero weights are rejected.
+12. Raw KPI values show units.
+13. Exact kpiId matching is used.
+14. Minimize and maximize formulas are correct.
+15. Equal values assign 100 and explain no differentiation.
+16. Missing values remain Missing.
+17. Weighted score renormalization is transparent.
+18. Data coverage is shown.
+19. Incomplete subsets generate warnings.
+20. Required conditional leading label is used.
+21. Ties are shown, not broken arbitrarily.
+22. Hard and warning thresholds are visible.
+23. Side-by-side includes architecture, configuration, run, features, results, quality, assumptions, warnings, and coverage.
+24. Charts use correct raw or normalized values.
+25. Raw charts do not mix incompatible units.
+26. Sensitivity uses 0–200% in 25% increments.
+27. Zero baseline weight is handled honestly.
+28. Sensitivity reports leader changes or ties.
+29. User can create and edit risks.
+30. User can create a decision from comparison.
+31. Suggested leader remains proposal until confirmation.
+32. Approved decision requires rationale.
+33. Dashboard rollups update from current data.
+34. Recommended actions are deterministic.
+35. User can create, list, restore, delete, and duplicate snapshots.
+36. Restore creates safety snapshot and requires confirmation.
+37. Snapshot serialization excludes snapshots and UI preferences.
+38. Corrupt snapshot cannot overwrite project.
+39. Export preview shows filters, counts, staleness, and integrity warnings.
+40. JSON export contains versions, IDs, metadata, and manifest.
+41. Complete JSON round-trips without project-data loss.
+42. Valid JSON imports as new project.
+43. Invalid JSON changes nothing.
+44. Replace import creates safety snapshot.
+45. XLSX export creates applicable headed sheets and survives empty optional data.
+46. PDF includes project, scope, assumptions, quality, KPI/simulation, comparison, coverage, decision, risks, and disclaimer.
+47. Export filters and referential-closure choices are respected.
+48. Refresh retains studies, decisions, risks, and snapshots.
+49. Stale runs and comparisons remain visible with warnings.
+50. All mandatory buttons work.
+51. No mandatory TODO or FIXME remains.
+52. Keyboard focus and labels exist for primary interactions.
+53. No primary content is clipped at laptop width.
+54. Sample demonstrates complete workflow.
+55. Complete application runs without runtime errors.
+56. npm install, typecheck, all regression tests, and build succeed.
+
+OUTPUT REQUIREMENTS
+
+Apply all changes to the existing repository. Include schema-4 migration, comparison actions and utilities, study-specific KPI settings, normalization, weighting, coverage, thresholds, sensitivity, Recharts views, risk and decision UI, dashboard rollups, application-level snapshot utilities, selective export filter engine, JSON import/export, SheetJS workbook generation, jsPDF report generation, accessibility improvements, sample completion, regression tests, README updates, CHANGELOG updates, and ACCEPTANCE_RESULTS_C.md.
+
+Before finalizing, execute a complete review against every Stage-A, Stage-B, and Stage-C acceptance test. Fix implementation defects. Return the complete runnable project, not a summary of intended changes.

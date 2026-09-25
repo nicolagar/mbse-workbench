@@ -1,0 +1,972 @@
+# Prompt B — Variability and Pre-Sizing
+
+## MBSE/MBPLE Web Application — Stage B of A → B → C
+
+ROLE
+
+Act as a senior full-stack software architect, UX designer, systems engineer, and test engineer with expertise in MBSE, MBPLE, SysML-inspired modeling, product/process/resource modeling, feature-based configuration, early-phase pre-sizing, architecture trade studies, browser application architecture, safe expression parsing, data migration, and engineering UX.
+
+GLOBAL PRODUCT RULES
+
+The product is a single-user, browser-based MBSE/MBPLE programme-preparation workbench. It demonstrates simplified digital-thread traceability, product/process/resource modeling, feature-based variability, deterministic 150%-to-100% derivation, preliminary KPI and pre-sizing calculations, architecture/configuration comparison, decisions, snapshots, and selective export.
+
+The product may support small, bounded early-phase engineering studies. It is not:
+- a certified engineering-analysis tool;
+- a professional SysML, PLM, manufacturing-planning, configuration-management, or simulation platform;
+- a regulatory-compliance system;
+- a replacement for detailed physical simulation or verified design substantiation.
+
+Every decision-relevant calculated or simulated result must display:
+
+“Preliminary engineering estimate — not a verified detailed-design result.”
+
+Use:
+- React;
+- TypeScript with strict mode;
+- Vite;
+- Tailwind CSS;
+- React Flow;
+- Recharts where charts are required;
+- Zustand;
+- localStorage;
+- Lucide React;
+- Vitest for domain-engine and migration tests;
+- React Testing Library where focused component tests provide value;
+- a custom safe tokenizer/parser/evaluator for feature and KPI expressions;
+- SheetJS only in Stage C for XLSX export;
+- jsPDF only in Stage C for PDF export.
+
+The application must:
+- run entirely in the browser;
+- require no backend, authentication, cloud service, or external API;
+- make no runtime network calls;
+- use no CDN-hosted assets, fonts, libraries, or icons;
+- remain usable without internet access when run locally after dependencies are installed;
+- preserve one canonical project model and one canonical Zustand store;
+- persist edits in versioned localStorage;
+- restore the active project after browser refresh;
+- validate imported and persisted data defensively;
+- never execute arbitrary user-entered code;
+- never use eval, Function, dynamic script injection, or JavaScript expression execution for user formulas or feature expressions;
+- provide honest empty states, validation messages, warnings, and limitations;
+- contain no non-working mandatory controls;
+- contain no TODO, FIXME, placeholder, mock-only, or “not implemented” behavior for mandatory requirements.
+
+Prioritize, in order:
+1. data integrity and safety;
+2. correct deterministic engineering logic;
+3. backward compatibility;
+4. functional completeness;
+5. transparent validation;
+6. usability and accessibility;
+7. visual polish.
+
+OFFLINE SCOPE
+
+Offline means the application works without internet access when started locally with:
+
+npm run dev
+
+or:
+
+npm run build
+npm run preview
+
+A service worker, installable PWA, and file:// execution are not required. The application must not require internet access after npm dependencies have been installed.
+
+EXECUTION ENVIRONMENT AND DELIVERY
+
+Work directly in the current writable project directory and create or modify actual files. Do not return the implementation as disconnected code snippets. Do not stop after planning or scaffolding.
+
+Use npm as the package manager.
+
+Choose mutually compatible stable dependency versions, pin exact versions in package.json, and generate package-lock.json. Do not use “latest”, caret ranges, or tilde ranges. Record the tested Node.js and npm versions in README.md.
+
+Before completing this stage, run:
+1. npm install
+2. npm run typecheck
+3. npm run test
+4. npm run build
+
+Fix all errors and rerun the commands until all four succeed. Do not claim completion unless they succeed.
+
+Maintain:
+- README.md;
+- CHANGELOG.md;
+- ACCEPTANCE_RESULTS_<STAGE>.md.
+
+For every acceptance test, record:
+- PASS;
+- FAIL;
+- NOT TESTABLE, with explanation.
+
+No mandatory acceptance test may remain FAIL or NOT TESTABLE at final delivery.
+
+At the end of the stage:
+- provide a concise implementation summary;
+- list the exact verification commands and outcomes;
+- state any non-blocking limitations;
+- return the complete runnable project or commit changes to the existing repository;
+- do not provide only a summary of intended changes.
+
+STAGE-B AUTHORITY AND CONTINUITY
+
+This prompt is a backward-compatible delta specification for the existing passing Stage-A repository.
+
+The existing repository, working Stage-A behavior, persisted data, accepted terminology, IDs, tests, and public store interfaces remain authoritative unless this prompt explicitly extends them.
+
+Do not:
+- rebuild the application;
+- generate a second store;
+- replace the project model;
+- discard existing IDs;
+- simplify or remove Stage-A behavior;
+- reset localStorage;
+- silently discard old projects.
+
+Extend the existing application in place.
+
+Stage-B REV02 persisted-app schemaVersion = 3.
+Stage-B REV02 Project.schemaVersion = 3.
+
+Implement a pure, tested migration from schema 1 or 2 to schema 3. The migration must:
+- preserve all Stage-A projects and IDs;
+- add safe defaults for new or previously optional fields;
+- convert legacy Configuration.selectedFeatureIds, if present, into manuallySelectedFeatureIds;
+- calculate effectiveSelectedFeatureIds and autoSelectedFeatureIds deterministically;
+- move any legacy resource metadata.requiredQuantity to matching requiresResource relationships where unambiguous;
+- preserve metadata.requiredQuantity only as ignored legacy data when migration is ambiguous, with a warning;
+- initialize modelRevision safely;
+- convert each legacy ModelElement.featureExpression into a first-class Existence variation point without changing the expression or target ID;
+- initialize Boolean/enumerated feature metadata, complete configuration featureValues, variationPoints, and realized derivation snapshots safely;
+- never mutate the raw source object;
+- be idempotent;
+- leave invalid data unchanged and enter a recovery path rather than overwriting it.
+
+MISSION
+
+Make these workspaces fully functional:
+- Variability;
+- Parameters and KPIs;
+- Simulation.
+
+Implement:
+- deterministic feature model;
+- feature hierarchy and constraints;
+- safe feature-expression parser;
+- configuration validation;
+- manual, automatic, and effective selections;
+- first-class reusable variation points;
+- non-mutating 150%-to-100% derivation;
+- parameter management;
+- safe KPI formula language;
+- standard pre-sizing algorithms;
+- unit checking;
+- process critical path;
+- immutable simulation records;
+- stale-result handling;
+- Stage-B validation;
+- differentiated sample variants.
+
+Do not yet implement:
+- weighted comparison;
+- comparison charts;
+- operational decision-log completion;
+- named snapshot operations;
+- JSON import/export;
+- XLSX export;
+- PDF export.
+
+Preserve their types and navigation for Stage C.
+
+REGRESSION REQUIREMENT
+
+All Stage-A automated tests and acceptance tests remain regression requirements. Run them in Stage B. Fix regressions rather than weakening tests.
+
+VARIABILITY WORKSPACE
+
+Provide tabs:
+1. Feature Model
+2. Constraints
+3. Variation Points
+4. Configurator
+5. 150% Preview
+6. 100% Realization
+7. Derivation Summary
+
+FEATURE MODEL
+
+Support:
+- create;
+- edit;
+- duplicate;
+- delete;
+- move to another parent;
+- reorder among siblings using sortOrder;
+- one parent per non-root feature;
+- exactly one root;
+- tree view and editable table view backed by the same canonical Feature array;
+- search and filters;
+- visible parent and group membership;
+- prevention or blocking detection of hierarchy cycles.
+
+Feature semantics:
+- root has no parentId and is always effectively selected;
+- mandatory and optional features have parentId;
+- xor and or are group-member types, not group-container nodes;
+- all group members sharing the same parentId and groupId form one group;
+- groupId is required for xor and or members;
+- groupId is forbidden for root, mandatory, and optional features;
+- a group cannot contain both xor and or members;
+- generated feature IDs contain no whitespace;
+- sortOrder is finite and determines sibling display order.
+
+FEATURE DELETION
+
+A feature referenced by a constraint, saved configuration, legacy featureExpression, or variation point cannot be deleted immediately.
+
+The delete dialog must:
+- list descendant features;
+- list feature constraints;
+- list saved configurations;
+- list affected variation points and their constrained elements/relationships.
+
+Offer:
+1. Cancel.
+2. Delete references and feature.
+
+When Delete references and feature is confirmed:
+- delete constraints involving the feature or descendants;
+- remove affected IDs from manuallySelectedFeatureIds;
+- recalculate effective and automatic selections;
+- remove each complete affected variation point that references the deleted feature or descendants;
+- add a validation warning naming each removed variation point and affected target;
+- delete descendants only after explicit confirmation;
+- never attempt unsafe Boolean-expression string rewriting;
+- increment modelRevision once for the complete transaction.
+
+FEATURE CONSTRAINTS
+
+Support:
+- requires: if source is effectively selected, target must be effectively selected;
+- excludes: source and target may not both be effectively selected.
+
+Constraint editor:
+- filters to existing features;
+- rejects self-constraints;
+- rejects exact duplicates;
+- shows plain-language statements;
+- navigates to involved features;
+- warns before deleting referenced features.
+
+FEATURE-EXPRESSION LANGUAGE
+
+Use Project.variationPoints as the canonical variability mapping. ModelElement.featureExpression is legacy input only and must be migrated to an Existence variation point.
+
+Supported grammar:
+- exact feature IDs;
+- AND;
+- OR;
+- NOT;
+- parentheses.
+
+Rules:
+- operators are case-insensitive;
+- whitespace outside IDs is ignored;
+- generated IDs contain no whitespace;
+- IDs are tokenized as complete identifiers;
+- substring matching is forbidden;
+- precedence is:
+  1. parentheses;
+  2. NOT;
+  3. AND;
+  4. OR;
+- syntax errors are blocking;
+- unknown feature IDs are blocking;
+- empty or whitespace-only expression means common;
+- use a custom tokenizer, parser, abstract syntax tree, and evaluator;
+- never use eval, Function, or dynamic JavaScript execution;
+- show a tokenized preview and plain-language evaluation summary;
+- validate before saving.
+
+Variation-point views:
+- by feature;
+- by model element.
+
+From a feature, list affected:
+- needs;
+- requirements;
+- functions;
+- logical elements;
+- technical elements;
+- interfaces;
+- processes;
+- resources;
+- verification methods;
+- parameter-owning elements;
+- KPI-relevant elements.
+
+From an element or relationship, show its constraining variation points.
+
+FEATURE VALUES AND VARIATION POINTS
+
+- A feature valueType is Boolean or enumeration.
+- Enumeration features define distinct allowedValues and a defaultValue.
+- Each feature is classified as external or internal variability.
+- A configuration records Boolean and enumerated values in featureValues; effective selection still controls hierarchy and group validity.
+- One reusable variation point may constrain multiple model elements or multiple relationships.
+- Realization scope defaults to the entire architecture-compatible model; users may explicitly narrow it to requirements, structure, behavior, process, resources, or verification, and scoped realization produces a warning.
+- A variation point condition combines the safe Boolean feature-expression grammar with zero or more typed feature-value conditions.
+- Supported variation-point kinds are Existence, Primitive Property, Primitive Tag, and Element Property.
+- Existence includes its targets when the condition is true and removes them when false.
+- Modification kinds use ordered value rules and whitelisted property paths; the first matching rule supplies the realized value.
+- Primitive Property supports safe scalar model fields, selected process/resource metadata, parameter values, and relationship quantity/name fields.
+- Primitive Tag supports custom-attribute scalar values and string tags.
+- Element Property supports safe element-reference retargeting such as relationship sourceId/targetId and architectureId.
+- Element Tag effects that require a stereotype/tag metamodel with element-valued references remain out of scope.
+- Never infer applicability from names or topology. Unconstrained content is common.
+- Never execute JavaScript, Python, Ruby, or arbitrary expressions.
+
+CONFIGURATION SELECTION MODEL
+
+Configuration uses:
+- manuallySelectedFeatureIds: direct user intent;
+- effectiveSelectedFeatureIds: root, manual selections, and deterministic mandatory selections;
+- autoSelectedFeatureIds: effective minus manual.
+
+Rules:
+- manuallySelectedFeatureIds never stores automatic selections unless the user explicitly selected the same feature;
+- root is effective and automatic unless the user interface treats it as fixed;
+- mandatory children of active parents are selected automatically;
+- mandatory children cannot be effectively deselected while their parent is active;
+- inactive branches do not force descendants;
+- deselecting a parent removes all descendants from manual, automatic, and effective selections;
+- invalid XOR, OR, requires, and excludes states remain visible for correction;
+- validation and derivation always use effectiveSelectedFeatureIds;
+- the UI distinguishes manual, automatic, and invalid states with text or icon in addition to color.
+
+CONFIGURATOR ACTIONS
+
+Provide:
+- Select architecture;
+- New configuration;
+- Load saved configuration;
+- Validate;
+- Save Configuration;
+- Duplicate Configuration;
+- Reset Selection;
+- Derive 100% Model.
+
+Disable derivation while invalid.
+
+CONFIGURATION VALIDATION
+
+Return all messages in this order:
+1. selected IDs must exist;
+2. exactly one root exists;
+3. root is effectively selected;
+4. each selected non-root feature has an effectively selected parent;
+5. all mandatory children of active parents are effectively selected;
+6. each active XOR group has exactly one selected member;
+7. each active OR group has one or more selected members;
+8. every requires constraint from an effective source has its target effective;
+9. no excludes pair has both features effective;
+10. all mapped feature expressions are syntactically valid and reference existing features.
+
+Severity:
+- rule violations are errors;
+- an effective selected feature that affects no element is a warning;
+- an unselected and unmapped feature is information.
+
+ARCHITECTURE-COMPATIBLE DERIVATION INPUT
+
+For selected architecture A:
+- include all common elements;
+- include all specific elements whose architectureId = A;
+- exclude specific elements assigned to other architectures.
+
+A relationship is architecture-compatible when:
+- both source and target are in the selected architecture input; and
+- relationship.architectureId is undefined or equals A.
+
+A common relationship has no architectureId.
+A relationship assigned to another architecture is excluded even if endpoints are common.
+
+150%-TO-100% DERIVATION
+
+Use this exact algorithm:
+1. Validate configuration.
+2. If invalid, stop and show actionable errors.
+3. Build architecture-compatible source element and relationship sets.
+4. Treat targets without an enabled Existence variation point as common.
+5. Evaluate every enabled Existence variation point against effectiveSelectedFeatureIds and typed featureValues.
+6. Include constrained targets when every applicable Existence condition is true; otherwise exclude them.
+7. Remove relationships explicitly excluded by an Existence variation point or whose realized endpoint does not exist.
+8. Evaluate active Primitive Property, Primitive Tag, and Element Property variation points in deterministic array order.
+9. For each active modification, apply the first matching ordered value rule to a cloned target using only its whitelisted property path.
+10. Block unsupported property paths, missing targets, missing rules, invalid conditions, and conflicting modifications.
+11. Record removed element/relationship IDs, modified element/relationship IDs, and every applied effect with variation point ID, target, property path, previous value, and realized value.
+12. Warn when relationship cleanup cascades from removal and ask the user to review remaining traceability completeness.
+13. Run model-quality validation against the realized subset.
+14. Calculate applicable KPI values against the realized subset, including modified values.
+15. Create a new immutable DerivationResult containing both the untouched source snapshot and cloned realized element/relationship snapshots.
+16. Store sourceProjectId, sourceArchitectureId, configurationId, sourceModelRevision, timestamp, selected feature IDs, typed feature values through the configuration, validation results, and KPI results.
+17. Do not mutate the source 150% model.
+18. Do not silently overwrite historical derivations; configuration.derivation may point to the latest derivation while old simulation records retain their referenced derivation snapshots.
+
+The configuration-aware 150% preview uses the same evaluator without persisting a realization:
+- common content is neutral;
+- included variable content is green;
+- excluded content is red;
+- modified content is yellow;
+- status is conveyed with text as well as color.
+
+The read-only 100% realization view shows:
+- included elements;
+- excluded elements;
+- preserved relationships;
+- removed relationships;
+- validation results;
+- active parameters;
+- recalculated KPI results;
+- realized property/target values and an applied-variation audit;
+- source 150% references;
+- filters by element type, feature, and warning;
+- read-only derived-state badge;
+- current or stale state.
+
+Derivation summary shows:
+- manual selections;
+- automatic selections;
+- effective selections;
+- included/excluded counts;
+- removed relationship count and IDs;
+- missing data;
+- validation findings;
+- source model revision;
+- timestamp;
+- stale/current status.
+
+MODEL REVISION AND STALENESS
+
+Project.modelRevision increments for domain edits affecting:
+- elements;
+- relationships;
+- parameters;
+- architectures;
+- features;
+- feature constraints;
+- configurations;
+- KPI definitions.
+
+It does not increment for:
+- navigation;
+- filters;
+- panel state;
+- viewing a historical result.
+
+Derivation is stale when:
+
+derivation.sourceModelRevision < project.modelRevision
+
+Simulation is stale when:
+
+simulationRun.projectModelRevisionAtRun < project.modelRevision
+
+Rules:
+- stale derivations and simulations remain viewable;
+- never silently recalculate historical records;
+- show Current, Stale, or Missing;
+- user explicitly derives or runs again;
+- Stage C may compare stale runs only with a visible warning.
+
+PARAMETERS WORKSPACE
+
+Make parameters editable from:
+- element details;
+- consolidated parameter table.
+
+Support:
+- name;
+- semanticKey;
+- description;
+- data type;
+- value;
+- unit;
+- source;
+- value origin;
+- minimum;
+- maximum;
+- uncertainty percentage;
+- applicable configuration IDs.
+
+Rules:
+- numeric values are finite numbers or null;
+- booleans and strings remain typed;
+- minimum must not exceed maximum;
+- out-of-range numeric values produce warnings;
+- uncertainty must be between 0 and 100;
+- valueOrigin is visually distinct;
+- stable IDs are preserved on edit;
+- duplicate names on one owner produce warning;
+- unknown configuration IDs are errors;
+- semanticKey drives standard algorithms;
+- parameter deletion warns when referenced by formulas.
+
+AUTHORITATIVE PROCESS DURATION
+
+The only user-maintained source for process duration is:
+- ModelElement.metadata.duration;
+- ModelElement.metadata.durationUnit.
+
+Critical path and resource calculations use those fields.
+
+A read-only calculated parameter with semanticKey = "durationHours" may be generated for formula visibility, but it must not be independently editable.
+
+Changing duration or durationUnit updates the derived durationHours representation and increments modelRevision.
+
+Time conversion:
+- minute ÷ 60;
+- hour unchanged;
+- day × 8.
+
+Always disclose:
+“One engineering day is assumed to equal eight hours.”
+
+RESOURCE QUANTITY
+
+The process-specific quantity is stored only on:
+
+process —requiresResource→ resource Relationship.requiredQuantity
+
+Rules:
+- finite and greater than zero;
+- defaults to 1 only when missing, with PMB-107;
+- resource metadata.requiredQuantity, if found in old data, is legacy and not authoritative;
+- quantities on other relationship types are ignored and warned.
+
+Resource metadata stores:
+- hourlyRate;
+- costUnit;
+- capacityHours;
+- availabilityPercent.
+
+KPI CALCULATION MODES
+
+KPI.calculationMode determines behavior.
+
+Formula KPI:
+- requires formula;
+- must not define standardAlgorithmKey.
+
+Standard-algorithm KPI:
+- requires standardAlgorithmKey;
+- must not define formula.
+
+Every KPI has:
+- stable ID;
+- name;
+- description;
+- outputUnit;
+- optimizationDirection;
+- weight;
+- optional target and thresholds;
+- parsed inputParameterIds;
+- parsed dependsOnKpiIds;
+- warnings;
+- createdAt and updatedAt.
+
+KPI FORMULA LANGUAGE
+
+Support:
+- finite numeric literals;
+- param("parameter-id");
+- kpi("kpi-id");
+- +;
+- -;
+- *;
+- /;
+- unary minus;
+- parentheses;
+- min(...);
+- max(...);
+- sum(...);
+- average(...).
+
+Precedence:
+1. parentheses and function calls;
+2. unary minus;
+3. multiplication and division;
+4. addition and subtraction.
+
+Rules:
+- min, max, sum, and average require at least one argument;
+- unknown functions are errors;
+- unknown parameter or KPI IDs are errors;
+- only numeric parameter values may participate;
+- null or non-numeric references are errors;
+- division by zero is an error;
+- extract and store inputParameterIds and dependsOnKpiIds from the parsed AST;
+- detect KPI dependency cycles before evaluation;
+- evaluate KPI dependencies in topological order;
+- preserve formula text;
+- preview without saving;
+- show source element, value, unit, source, and origin for each referenced parameter;
+- never use eval, Function, or JavaScript execution.
+
+UNIT HANDLING
+
+Implement conservative symbolic units:
+- addition and subtraction require exactly equal units;
+- min, max, sum, and average require equal units;
+- multiplication produces a composite such as kg*h;
+- division produces a composite such as EUR/h;
+- multiplication/division by a dimensionless value retains the other unit;
+- do not perform automatic conversions except the explicit process-time conversion;
+- incompatible addition/subtraction/aggregation is an error;
+- unknown composite simplification is a warning;
+- outputUnit differing from evaluated unit is a warning;
+- never invent a conversion.
+
+STANDARD PRE-SIZING ALGORITHMS
+
+Run only on:
+- selected architecture;
+- and, when provided, selected valid derivation/configuration.
+
+Active data means the architecture-compatible source subset or the selected derived subset.
+
+Total mass:
+- sum active numeric parameters with semanticKey = "mass";
+- require consistent units;
+- sample uses kg.
+
+Direct element cost:
+- sum active numeric parameters with semanticKey = "cost";
+- require consistent units;
+- sample uses EUR.
+
+Process cost:
+- for each active process, convert authoritative duration to hours;
+- find active process —requiresResource→ resource relationships;
+- for each assignment use resource.metadata.hourlyRate;
+- use relationship.requiredQuantity;
+- default missing quantity to 1 with warning;
+- process resource cost = durationHours × hourlyRate × requiredQuantity;
+- sum all active assignments.
+
+Estimated total cost:
+- direct element cost + process cost.
+
+Total power:
+- sum active numeric parameters with semanticKey = "power";
+- sample uses kW.
+
+Manufacturing lead time:
+- use active process elements and active dependsOn relationships;
+- detect cycles first;
+- process without predecessors starts at 0;
+- earliestStart = maximum earliestFinish of predecessors;
+- earliestFinish = earliestStart + durationHours;
+- lead time = maximum earliestFinish;
+- show the critical predecessor chain;
+- missing or non-positive duration is blocking.
+
+Resource demand:
+- for each active resource, sum durationHours × requiredQuantity across active process assignments;
+- display resource-hours;
+- do not claim capacity feasibility without capacity and availability.
+
+Basic utilization:
+- availableHours = capacityHours × availabilityPercent / 100;
+- utilizationPercent = demandHours / availableHours × 100;
+- missing capacity or availability = Not available;
+- zero or negative available hours = error;
+- above 100% = warning.
+
+Throughput Proxy:
+- 1 / manufacturingLeadTimeHours;
+- unit 1/h;
+- maximize;
+- explicitly describe as a simplified comparative proxy, not actual production throughput.
+
+SIMULATION RUNS
+
+Before run:
+- validate architecture;
+- validate configuration when provided;
+- require current valid derivation when configured;
+- validate feature expressions;
+- validate parameters;
+- validate formula ASTs;
+- detect KPI dependency cycles;
+- detect process cycles;
+- show blocking errors and warnings.
+
+A saved run:
+- is immutable;
+- references architecture;
+- optionally references configuration and derivation;
+- stores projectModelRevisionAtRun;
+- stores complete SimulationInputSnapshot;
+- stores selected KPI IDs and standard algorithm keys;
+- stores results with exact kpiId or algorithmKey;
+- stores source parameter IDs;
+- stores assumptions;
+- stores warnings;
+- stores validation summary.
+
+A KPI result is matched only by exact kpiId. Matching by display name is forbidden.
+
+Every result view shows:
+- disclaimer;
+- architecture;
+- configuration;
+- current/stale state;
+- value and unit;
+- input sources;
+- formula or algorithm;
+- assumptions;
+- missing information;
+- warnings;
+- timestamp;
+- source project model revision.
+
+PROMPT-B VALIDATION RULES
+
+Errors:
+- PMB-001 Feature hierarchy cycle.
+- PMB-002 Missing feature parent.
+- PMB-003 Invalid feature-expression syntax.
+- PMB-004 Unknown feature in expression.
+- PMB-005 Invalid mandatory selection.
+- PMB-006 Invalid XOR selection.
+- PMB-007 Invalid OR selection.
+- PMB-008 Requires constraint not fulfilled.
+- PMB-009 Excludes constraint violated.
+- PMB-010 Feature constraint references missing feature.
+- PMB-011 KPI formula syntax error.
+- PMB-012 Missing parameter reference.
+- PMB-013 Missing KPI reference.
+- PMB-014 Circular KPI dependency.
+- PMB-015 Division by zero.
+- PMB-016 Incompatible units.
+- PMB-017 Missing numeric simulation input.
+- PMB-018 Process cycle prevents lead-time calculation.
+- PMB-019 Invalid resource-assignment quantity.
+- PMB-020 Invalid configuration reference.
+- PMB-021 Formula KPI or standard-algorithm KPI mode is inconsistent.
+- PMB-022 Feature group contains mixed XOR and OR types.
+- PMB-023 Multiple or missing root feature.
+- PMB-024 Invalid process duration.
+- PMB-025 Invalid or zero available resource hours.
+
+Warnings:
+- PMB-101 Unmapped feature.
+- PMB-102 Feature expression maps no active element.
+- PMB-103 Parameter outside recommended range.
+- PMB-104 Numeric parameter missing unit.
+- PMB-105 KPI output unit differs from evaluated unit.
+- PMB-106 Composite unit not simplified.
+- PMB-107 Resource required quantity defaulted to one.
+- PMB-108 Resource utilization exceeds 100%.
+- PMB-109 Derivation removed relationships.
+- PMB-110 Derived model contains broken traceability coverage.
+- PMB-111 Duplicate parameter name on owner.
+- PMB-112 Derivation is stale.
+- PMB-113 Simulation run is stale.
+- PMB-114 Legacy resource quantity could not be migrated unambiguously.
+- PMB-115 Feature deletion cleared applicability expressions.
+
+Information:
+- PMB-201 Common element included without feature expression.
+- PMB-202 Feature selected automatically.
+- PMB-203 Feature has no direct element mapping.
+
+SAMPLE PROJECT EXTENSION
+
+Extend Configurable Industrial Assembly Machine with:
+
+Root:
+- Industrial Assembly Machine
+
+Mandatory:
+- Core Control
+- Safety Package
+
+Loading Method XOR group:
+- Manual Loading
+- Automated Feeding
+
+Assembly Method XOR group:
+- Manual Fastening
+- Robotic Fastening
+
+Inspection Options OR group:
+- Vision Inspection
+- Dimensional Probe
+
+Optional:
+- Production Data Recording
+- Advanced Analytics
+
+Constraints:
+- Automated Feeding requires Robotic Fastening.
+- Robotic Fastening requires Safety Package.
+- Advanced Analytics requires Production Data Recording.
+- Manual Loading excludes Automated Feeding.
+- Manual Fastening excludes Robotic Fastening.
+
+Map feature expressions to relevant:
+- technical elements;
+- processes;
+- interfaces;
+- resources;
+- optional data functions.
+
+Common requirements, control, and safety content remains common unless intentionally controlled.
+
+Configurations:
+1. Manual Customer Variant:
+   - Manual Loading
+   - Manual Fastening
+   - Vision Inspection
+   - Production Data Recording
+2. Automated Customer Variant:
+   - Automated Feeding
+   - Robotic Fastening
+   - Vision Inspection
+   - Dimensional Probe
+   - Production Data Recording
+   - Advanced Analytics
+3. Invalid Demonstration:
+   - Automated Feeding
+   - Manual Fastening
+   - without Robotic Fastening
+
+Store the invalid example as invalid or provide a reproducible preset.
+
+Add realistic editable sample data:
+- mass in kg;
+- cost in EUR;
+- power in kW;
+- process duration in minutes or hours;
+- resource hourlyRate in EUR/h;
+- requiresResource relationship requiredQuantity;
+- capacityHours;
+- availabilityPercent;
+- ranges;
+- sources;
+- value origins.
+
+Create KPIs:
+- Total Mass — standardAlgorithm totalMass — minimize — kg.
+- Estimated Total Cost — standardAlgorithm estimatedTotalCost — minimize — EUR.
+- Manufacturing Lead Time — standardAlgorithm manufacturingLeadTime — minimize — h.
+- Resource Demand — standardAlgorithm resourceDemand — minimize — resource-h.
+- Throughput Proxy — standardAlgorithm throughputProxy — maximize — 1/h.
+- At least one editable formula KPI using param() and/or kpi().
+
+Manual and automated variants must generate different results from actual stored inputs.
+
+AUTOMATED TESTS
+
+Run all Stage-A tests and add at minimum:
+- Stage-A-to-Stage-B migration;
+- migration idempotence;
+- legacy selectedFeatureIds conversion;
+- legacy resource quantity migration behavior;
+- feature hierarchy-cycle detection;
+- unique-root validation;
+- mandatory-selection behavior;
+- active/inactive XOR groups;
+- active/inactive OR groups;
+- requires and excludes constraints;
+- feature-expression precedence;
+- unknown feature rejection;
+- feature deletion reference cleanup;
+- architecture-compatible source filtering;
+- non-mutating derivation;
+- relationship removal during derivation;
+- stale derivation detection;
+- formula tokenization and precedence;
+- unary minus;
+- missing parameter;
+- missing KPI;
+- division by zero;
+- KPI dependency cycle;
+- unit compatibility and incompatibility;
+- critical path with sequential and parallel branches;
+- process-cycle detection;
+- requiredQuantity per relationship;
+- standard algorithm results;
+- simulation immutability;
+- exact kpiId result matching;
+- differentiated sample results.
+
+STAGE-B ACCEPTANCE TESTS
+
+Stage B is complete only if:
+1. All Stage-A behavior remains functional.
+2. Existing Stage-A projects migrate without data loss.
+3. Migration is idempotent.
+4. Feature tree and table show the same data.
+5. User can create, edit, duplicate, move, reorder, and delete features.
+6. Hierarchy cycles are prevented or detected.
+7. Exactly one root is enforced.
+8. User can create requires and excludes constraints.
+9. Self and duplicate constraints are rejected.
+10. Feature deletion safely handles constraints, configurations, descendants, and variation points.
+11. User can map multiple elements or relationships with safe first-class variation points.
+12. Invalid syntax and unknown feature IDs are detected before saving.
+13. Unconstrained elements and relationships are shown as common.
+14. Configurator distinguishes manual, automatic, effective, and invalid selections.
+15. Root and mandatory behavior is enforced.
+16. XOR groups require exactly one active member.
+17. OR groups require one or more active members.
+18. Requires and excludes rules produce actionable messages.
+19. Invalid configurations cannot be derived.
+20. Valid configurations can be saved and duplicated.
+21. Derivation uses architecture-compatible common and specific content.
+22. Derivation leaves source 150% model unchanged.
+23. Realized view shows included/excluded/modified elements and preserved/removed/modified relationships.
+24. Derivation retains source IDs, revision, and timestamp.
+25. Stale derivations are identified and not silently recalculated.
+26. User can edit parameters in consolidated and element views.
+27. Process duration has one authoritative source.
+28. Resource quantity is per requiresResource relationship.
+29. Value origin is visually distinctive.
+30. Invalid range and uncertainty values are rejected or warned.
+31. User can create and edit formula and standard-algorithm KPIs.
+32. Formula editor inserts exact parameter and KPI tokens from searchable lists.
+33. Formula preview calculates valid expressions.
+34. Missing references, syntax errors, division by zero, and KPI cycles are detected.
+35. Unit incompatibility blocks invalid calculations.
+36. Total mass, cost, power, lead time, resource demand, utilization, and throughput proxy follow stated algorithms.
+37. Lead time uses critical path, not simple summation.
+38. Critical chain is displayed.
+39. Process cycles block lead time.
+40. Variant-specific simulation stores immutable realized inputs, applied variation IDs, and exact KPI IDs.
+41. Stale runs are marked and remain viewable.
+42. Every result shows inputs, algorithm, assumptions, warnings, timestamp, source revision, and disclaimer.
+43. Manual and automated variants produce different results.
+44. Refresh retains Stage-B schema-3 data.
+45. No mandatory control is a placeholder.
+46. No mandatory TODO or FIXME remains.
+47. npm install, typecheck, all regression tests, and build succeed.
+48. Legacy element expressions migrate to first-class Existence variation points.
+49. Boolean and enumerated feature values persist and validate.
+50. Features identify external or internal variability.
+51. Existence, Primitive Property, Primitive Tag, and Element Property effects realize deterministically.
+52. The 150% preview is non-mutating and visibly distinguishes common, included, excluded, and modified content.
+53. The 100% realization stores immutable modified snapshots and an applied-effect audit.
+54. Cascade cleanup produces a completeness warning.
+55. KPI and simulation analysis consumes the realized 100% snapshot.
+56. Simulation requires a compatible current configuration realization.
+57. Realization defaults to the entire compatible model and supports explicit domain scope with a warning.
+
+OUTPUT REQUIREMENTS
+
+Apply all changes to the existing repository. Include schema-3 migration, extended store actions, typed feature values, first-class variation points, feature parser, feature validator, configuration engine, preview/realization engine, KPI parser/evaluator, unit checker, standard algorithms, critical-path utilities, variant-specific simulation workspace, Stage-B validation, extended sample data, tests, README updates, CHANGELOG updates, and ACCEPTANCE_RESULTS_B.md.
+
+Before finalizing, verify backward compatibility, migration safety, TypeScript, imports, persistence, feature cycles, constraints, expression safety, deletion cleanup, derivation non-mutation, staleness, formula safety, KPI cycles, unit rules, critical path, resource quantity, sample differentiation, Stage-A regressions, all Stage-B tests, and every acceptance test.

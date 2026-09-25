@@ -1,0 +1,1188 @@
+# Prompt A — Modeling Foundation
+
+## MBSE/MBPLE Web Application — Stage A of A → B → C
+
+ROLE
+
+Act as a senior full-stack software architect, UX designer, systems engineer, and test engineer with expertise in MBSE, MBPLE, SysML-inspired modeling, product/process/resource modeling, feature-based configuration, early-phase pre-sizing, architecture trade studies, browser application architecture, safe expression parsing, data migration, and engineering UX.
+
+GLOBAL PRODUCT RULES
+
+The product is a single-user, browser-based MBSE/MBPLE programme-preparation workbench. It demonstrates simplified digital-thread traceability, product/process/resource modeling, feature-based variability, deterministic 150%-to-100% derivation, preliminary KPI and pre-sizing calculations, architecture/configuration comparison, decisions, snapshots, and selective export.
+
+The product may support small, bounded early-phase engineering studies. It is not:
+- a certified engineering-analysis tool;
+- a professional SysML, PLM, manufacturing-planning, configuration-management, or simulation platform;
+- a regulatory-compliance system;
+- a replacement for detailed physical simulation or verified design substantiation.
+
+Every decision-relevant calculated or simulated result must display:
+
+“Preliminary engineering estimate — not a verified detailed-design result.”
+
+Use:
+- React;
+- TypeScript with strict mode;
+- Vite;
+- Tailwind CSS;
+- React Flow;
+- Recharts where charts are required;
+- Zustand;
+- localStorage;
+- Lucide React;
+- Vitest for domain-engine and migration tests;
+- React Testing Library where focused component tests provide value;
+- a custom safe tokenizer/parser/evaluator for feature and KPI expressions;
+- SheetJS only in Stage C for XLSX export;
+- jsPDF only in Stage C for PDF export.
+
+The application must:
+- run entirely in the browser;
+- require no backend, authentication, cloud service, or external API;
+- make no runtime network calls;
+- use no CDN-hosted assets, fonts, libraries, or icons;
+- remain usable without internet access when run locally after dependencies are installed;
+- preserve one canonical project model and one canonical Zustand store;
+- persist edits in versioned localStorage;
+- restore the active project after browser refresh;
+- validate imported and persisted data defensively;
+- never execute arbitrary user-entered code;
+- never use eval, Function, dynamic script injection, or JavaScript expression execution for user formulas or feature expressions;
+- provide honest empty states, validation messages, warnings, and limitations;
+- contain no non-working mandatory controls;
+- contain no TODO, FIXME, placeholder, mock-only, or “not implemented” behavior for mandatory requirements.
+
+Prioritize, in order:
+1. data integrity and safety;
+2. correct deterministic engineering logic;
+3. backward compatibility;
+4. functional completeness;
+5. transparent validation;
+6. usability and accessibility;
+7. visual polish.
+
+OFFLINE SCOPE
+
+Offline means the application works without internet access when started locally with:
+
+npm run dev
+
+or:
+
+npm run build
+npm run preview
+
+A service worker, installable PWA, and file:// execution are not required. The application must not require internet access after npm dependencies have been installed.
+
+EXECUTION ENVIRONMENT AND DELIVERY
+
+Work directly in the current writable project directory and create or modify actual files. Do not return the implementation as disconnected code snippets. Do not stop after planning or scaffolding.
+
+Use npm as the package manager.
+
+Choose mutually compatible stable dependency versions, pin exact versions in package.json, and generate package-lock.json. Do not use “latest”, caret ranges, or tilde ranges. Record the tested Node.js and npm versions in README.md.
+
+Before completing this stage, run:
+1. npm install
+2. npm run typecheck
+3. npm run test
+4. npm run build
+
+Fix all errors and rerun the commands until all four succeed. Do not claim completion unless they succeed.
+
+Maintain:
+- README.md;
+- CHANGELOG.md;
+- ACCEPTANCE_RESULTS_<STAGE>.md.
+
+For every acceptance test, record:
+- PASS;
+- FAIL;
+- NOT TESTABLE, with explanation.
+
+No mandatory acceptance test may remain FAIL or NOT TESTABLE at final delivery.
+
+At the end of the stage:
+- provide a concise implementation summary;
+- list the exact verification commands and outcomes;
+- state any non-blocking limitations;
+- return the complete runnable project or commit changes to the existing repository;
+- do not provide only a summary of intended changes.
+
+STAGE-A AUTHORITY AND SCOPE
+
+This prompt defines Stage A of a three-stage implementation. Create the initial application and its authoritative core architecture. Stage B and Stage C will extend this exact repository and data model.
+
+Implement:
+- application shell and seven workspaces;
+- project creation, duplication, switching, deletion, and reset;
+- architecture contexts;
+- model-element CRUD;
+- parameter CRUD;
+- relationship CRUD and validation;
+- editable tables;
+- React Flow navigation graph;
+- traceability matrix;
+- model-quality validation;
+- traceability and maturity metrics;
+- versioned local persistence;
+- safe migration infrastructure;
+- editable sample data.
+
+Do not implement operational Stage-B or Stage-C behavior yet:
+- no feature-configuration evaluation;
+- no 150%-to-100% derivation;
+- no KPI calculation;
+- no simulation;
+- no trade-study scoring;
+- no operational snapshots;
+- no JSON import/export;
+- no XLSX export;
+- no PDF export.
+
+However, define the final forward-compatible TypeScript structures required by Stages B and C. Initialize later-stage arrays and optional fields safely. Do not create parallel future models later.
+
+DESIGN PRINCIPLES
+
+Use a professional engineering-workbench interface for systems engineers, product architects, manufacturing engineers, process engineers, product-line engineers, programme teams, project managers, and technical decision-makers.
+
+Layout:
+- persistent left navigation;
+- top project and architecture context bar;
+- central workspace;
+- optional right-side details panel;
+- responsive laptop and desktop behavior, targeting 1024 px and wider;
+- no horizontal clipping of primary actions.
+
+Visual language:
+- slate and neutral tones for structure;
+- blue for product content;
+- teal for process content;
+- purple for resources;
+- amber for assumptions and warnings;
+- red for errors;
+- green for valid or complete states.
+
+Use:
+- cards;
+- tables;
+- forms;
+- tabs;
+- badges;
+- progress indicators;
+- search;
+- filters;
+- breadcrumbs;
+- tooltips;
+- explicit empty states;
+- visible keyboard focus;
+- labels and accessible names.
+
+Avoid:
+- excessive gradients;
+- decorative animation;
+- crowded dashboards;
+- unnecessary modal sequences;
+- unexplained specialist abbreviations;
+- visual imitation of a certified engineering tool.
+
+Always distinguish:
+- user-entered values;
+- assumptions;
+- calculated values;
+- simulated values;
+- missing values.
+
+In Stage A, calculated and simulated structures may exist in TypeScript but must not be displayed as computed results.
+
+APPLICATION WORKSPACES
+
+Create seven top-level workspaces:
+1. Dashboard
+2. Model
+3. Variability
+4. Parameters and KPIs
+5. Simulation
+6. Comparison and Decisions
+7. Export
+
+In Stage A:
+- Dashboard and Model are fully functional.
+- The other five workspaces show honest, informative empty states that identify the later implementation stage.
+- Do not show fake configurations, calculations, charts, decisions, snapshots, or exports.
+
+The Model workspace contains:
+1. Needs and Requirements
+2. Functions and Architecture
+3. Processes and Resources
+4. Interfaces and Traceability
+
+Each Model tab must support:
+- search;
+- relevant filters;
+- create;
+- edit;
+- duplicate where useful;
+- delete;
+- item selection;
+- complete details;
+- navigation to connected elements.
+
+Provide three views backed by the same canonical project data:
+- editable tables;
+- React Flow graph;
+- traceability matrix.
+
+STAGE-A GRAPH SCOPE
+
+The graph:
+- is generated from canonical ModelElement and Relationship records;
+- supports node selection;
+- opens the selected element in the details panel;
+- supports filtering by element type and architecture;
+- preserves architecture-independent elements;
+- may allow node movement and local layout persistence;
+- may use a deterministic automatic layout.
+
+Relationship creation and editing must be implemented through forms or the traceability matrix. Drag-to-create graph edges is not required in Stage A. Do not create a second graph-only relationship store.
+
+VERSIONED APPLICATION STATE
+
+Use one localStorage root key:
+
+mbse-mbple-workbench
+
+Define:
+
+```ts
+interface PersistedAppState {
+  schemaVersion: number;
+  activeProjectId: string | null;
+  projects: Project[];
+  snapshots: ProjectSnapshot[];
+  uiPreferences: UiPreferences;
+}
+
+interface UiPreferences {
+  activeWorkspace: WorkspaceId;
+  activeModelTab: ModelTabId;
+  detailsPanelOpen: boolean;
+}
+
+type WorkspaceId =
+  | "dashboard"
+  | "model"
+  | "variability"
+  | "parameters"
+  | "simulation"
+  | "comparison"
+  | "export";
+
+type ModelTabId =
+  | "needs-requirements"
+  | "functions-architecture"
+  | "processes-resources"
+  | "interfaces-traceability";
+```
+
+Stage-A persisted-app schemaVersion = 1.
+
+Rules:
+- snapshots are application-level records and are never nested inside Project;
+- projects are isolated containers;
+- IDs must be unique within a project, not globally across all projects;
+- activeProjectId must reference an existing project or be null;
+- if the active project is deleted, select the next available project; if none exists, create the sample project;
+- project domain edits increment Project.modelRevision;
+- navigation-only and panel-layout changes do not increment modelRevision;
+- updatedAt changes only for persisted domain edits;
+- debounce autosave by 300–500 ms;
+- show autosave states: Saving, Saved, and Save error;
+- validate stored data defensively before loading;
+- if stored data is corrupt, do not silently overwrite it;
+- show a recovery view allowing download of the raw stored value and reset to sample data.
+
+FORWARD-COMPATIBLE CORE DATA MODEL
+
+Use stable string IDs and ISO date-time strings.
+
+```ts
+interface Project {
+  id: string;
+  schemaVersion: number;
+  modelRevision: number;
+  name: string;
+  description: string;
+  objectives: string[];
+  assumptions: Assumption[];
+  openDecisions: OpenDecision[];
+  baselineArchitectureId?: string;
+  activeArchitectureId?: string;
+  createdAt: string;
+  updatedAt: string;
+
+  architectures: Architecture[];
+  elements: ModelElement[];
+  relationships: Relationship[];
+  features: Feature[];
+  featureConstraints: FeatureConstraint[];
+  configurations: Configuration[];
+  kpis: KPI[];
+  simulationRuns: SimulationRun[];
+  comparisonStudies: ComparisonStudy[];
+  comparisonRisks: ComparisonRisk[];
+  decisions: Decision[];
+  validationResults: ValidationResult[];
+}
+
+interface Architecture {
+  id: string;
+  name: string;
+  description: string;
+  status: "concept" | "candidate" | "baseline";
+  createdAt: string;
+  updatedAt: string;
+}
+
+type ElementType =
+  | "stakeholder"
+  | "need"
+  | "requirement"
+  | "useCase"
+  | "function"
+  | "logicalElement"
+  | "technicalElement"
+  | "interface"
+  | "process"
+  | "resource"
+  | "verificationMethod";
+
+type ElementStatus = "draft" | "reviewed" | "approved";
+type ArchitectureScope = "common" | "specific";
+
+interface ModelElement {
+  id: string;
+  elementType: ElementType;
+  name: string;
+  description: string;
+  status: ElementStatus;
+  architectureScope: ArchitectureScope;
+  architectureId?: string;
+  featureExpression?: string;
+  parameters: Parameter[];
+  tags: string[];
+  metadata: ElementMetadata;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ElementMetadata {
+  source?: string;
+  owner?: string;
+  priority?: "low" | "medium" | "high" | "critical";
+  lifecycleState?: string;
+  verificationMethod?: string;
+  notes?: string;
+  resourceType?: ResourceType;
+  processType?: ProcessType;
+  duration?: number;
+  durationUnit?: TimeUnit;
+  capacityHours?: number;
+  availabilityPercent?: number;
+  hourlyRate?: number;
+  costUnit?: string;
+  graphPosition?: { x: number; y: number };
+}
+
+type ProcessType =
+  | "engineering"
+  | "manufacturing"
+  | "assembly"
+  | "integration"
+  | "verification"
+  | "test";
+
+type ResourceType =
+  | "person"
+  | "role"
+  | "skill"
+  | "tool"
+  | "machine"
+  | "software"
+  | "facility";
+
+type TimeUnit = "minute" | "hour" | "day";
+
+type RelationshipType =
+  | "ownedBy"
+  | "derives"
+  | "satisfies"
+  | "refines"
+  | "verifies"
+  | "realizes"
+  | "performs"
+  | "connects"
+  | "allocatedTo"
+  | "requiresResource"
+  | "dependsOn"
+  | "produces"
+  | "consumes";
+
+interface Relationship {
+  id: string;
+  relationshipType: RelationshipType;
+  sourceId: string;
+  targetId: string;
+  name?: string;
+  description?: string;
+  architectureId?: string;
+  requiredQuantity?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Parameter {
+  id: string;
+  ownerElementId: string;
+  name: string;
+  semanticKey: string;
+  description: string;
+  dataType: "number" | "string" | "boolean";
+  value: number | string | boolean | null;
+  unit?: string;
+  source?: string;
+  valueOrigin: "entered" | "assumed" | "calculated" | "simulated";
+  minimum?: number;
+  maximum?: number;
+  uncertaintyPercent?: number;
+  applicableConfigurationIds: string[];
+}
+
+interface Assumption {
+  id: string;
+  title: string;
+  description: string;
+  source?: string;
+  confidence: "low" | "medium" | "high";
+  status: "open" | "confirmed" | "invalidated";
+  relatedElementIds: string[];
+}
+
+interface OpenDecision {
+  id: string;
+  question: string;
+  description?: string;
+  status: "open" | "inReview" | "closed";
+  relatedElementIds: string[];
+}
+
+interface Feature {
+  id: string;
+  parentId?: string;
+  name: string;
+  featureType: "root" | "mandatory" | "optional" | "xor" | "or";
+  groupId?: string;
+  sortOrder: number;
+  description: string;
+}
+
+interface FeatureConstraint {
+  id: string;
+  type: "requires" | "excludes";
+  sourceFeatureId: string;
+  targetFeatureId: string;
+}
+
+interface Configuration {
+  id: string;
+  name: string;
+  architectureId: string;
+  manuallySelectedFeatureIds: string[];
+  effectiveSelectedFeatureIds: string[];
+  autoSelectedFeatureIds: string[];
+  validationStatus: "notValidated" | "valid" | "invalid";
+  validationMessages: string[];
+  derivedElementIds: string[];
+  excludedElementIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  derivation?: DerivationResult;
+}
+
+interface DerivationResult {
+  id: string;
+  configurationId: string;
+  sourceProjectId: string;
+  sourceArchitectureId: string;
+  sourceModelRevision: number;
+  timestamp: string;
+  manuallySelectedFeatureIds: string[];
+  effectiveSelectedFeatureIds: string[];
+  autoSelectedFeatureIds: string[];
+  includedElementIds: string[];
+  excludedElementIds: string[];
+  preservedRelationshipIds: string[];
+  removedRelationshipIds: string[];
+  warnings: string[];
+  validationSnapshot: ValidationResult[];
+  calculatedKpiValues: Record<string, number | null>;
+}
+
+type StandardAlgorithmKey =
+  | "totalMass"
+  | "directElementCost"
+  | "processCost"
+  | "estimatedTotalCost"
+  | "totalPower"
+  | "manufacturingLeadTime"
+  | "resourceDemand"
+  | "throughputProxy";
+
+interface KPI {
+  id: string;
+  name: string;
+  description: string;
+  calculationMode: "formula" | "standardAlgorithm";
+  formula?: string;
+  standardAlgorithmKey?: StandardAlgorithmKey;
+  outputUnit: string;
+  optimizationDirection: "minimize" | "maximize";
+  weight: number;
+  targetValue?: number;
+  minimumThreshold?: number;
+  maximumThreshold?: number;
+  inputParameterIds: string[];
+  dependsOnKpiIds: string[];
+  lastCalculatedValue?: number | null;
+  calculationWarnings: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface SimulationInputSnapshot {
+  projectId: string;
+  projectModelRevision: number;
+  architectureId: string;
+  configurationId?: string;
+  derivationId?: string;
+  activeElementIds: string[];
+  activeRelationshipIds: string[];
+  parameterValues: Record<string, number | string | boolean | null>;
+  kpiDefinitions: KPI[];
+}
+
+interface SimulationRun {
+  id: string;
+  name: string;
+  architectureId: string;
+  configurationId?: string;
+  derivationId?: string;
+  timestamp: string;
+  projectModelRevisionAtRun: number;
+  inputSnapshot: SimulationInputSnapshot;
+  selectedKpiIds: string[];
+  selectedAlgorithmKeys: StandardAlgorithmKey[];
+  results: SimulationResult[];
+  sourceParameterIds: string[];
+  assumptions: string[];
+  warnings: string[];
+  validationSummary: {
+    errors: number;
+    warnings: number;
+    information: number;
+  };
+}
+
+interface SimulationResult {
+  id: string;
+  kpiId?: string;
+  algorithmKey?: StandardAlgorithmKey;
+  name: string;
+  value: number | null;
+  unit: string;
+  sourceParameterIds: string[];
+  formulaOrAlgorithm: string;
+  warnings: string[];
+}
+
+interface ComparisonThreshold {
+  minimum?: number;
+  maximum?: number;
+  mode: "warning" | "hard";
+}
+
+interface ComparisonKpiSetting {
+  weight: number;
+  optimizationDirection: "minimize" | "maximize";
+  threshold?: ComparisonThreshold;
+}
+
+interface ComparisonStudy {
+  id: string;
+  name: string;
+  description: string;
+  alternativeRefs: ComparisonAlternativeRef[];
+  selectedKpiIds: string[];
+  kpiSettings: Record<string, ComparisonKpiSetting>;
+  createdAt: string;
+  updatedAt: string;
+  results?: ComparisonResult;
+  sensitivityResult?: WeightSensitivityResult;
+}
+
+interface ComparisonAlternativeRef {
+  id: string;
+  label: string;
+  architectureId: string;
+  configurationId?: string;
+  simulationRunId: string;
+}
+
+interface ComparisonResult {
+  studyId: string;
+  timestamp: string;
+  inputProjectModelRevision: number;
+  rawValues: Record<string, Record<string, number | null>>;
+  normalizedScores: Record<string, Record<string, number | null>>;
+  weightedScores: Record<string, number | null>;
+  dataCoveragePercent: Record<string, number>;
+  thresholdViolations: ThresholdViolation[];
+  warnings: string[];
+}
+
+interface ThresholdViolation {
+  alternativeId: string;
+  kpiId: string;
+  value: number;
+  message: string;
+  severity: "warning" | "error";
+}
+
+interface WeightSensitivityResult {
+  studyId: string;
+  timestamp: string;
+  series: WeightSensitivitySeries[];
+}
+
+interface WeightSensitivitySeries {
+  kpiId: string;
+  points: Array<{
+    multiplierPercent: number;
+    alternativeScores: Record<string, number | null>;
+    leadingAlternativeIds: string[];
+  }>;
+  leaderChanged: boolean;
+  warnings: string[];
+}
+
+interface ComparisonRisk {
+  id: string;
+  comparisonStudyId: string;
+  alternativeId: string;
+  title: string;
+  description: string;
+  likelihood: "low" | "medium" | "high";
+  impact: "low" | "medium" | "high";
+  mitigation?: string;
+}
+
+interface Decision {
+  id: string;
+  question: string;
+  alternatives: string[];
+  criteria: string[];
+  selectedAlternative?: string;
+  rationale?: string;
+  supportingSimulationRunIds: string[];
+  supportingComparisonStudyIds: string[];
+  assumptions: string[];
+  risks: string[];
+  openActions: string[];
+  status: "draft" | "proposed" | "approved" | "revisit";
+  owner?: string;
+  decisionDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ProjectSnapshot {
+  id: string;
+  sourceProjectId: string;
+  name: string;
+  note?: string;
+  projectName: string;
+  createdAt: string;
+  schemaVersion: number;
+  projectData: string;
+}
+
+interface ValidationResult {
+  id: string;
+  ruleId: string;
+  severity: "error" | "warning" | "information";
+  title: string;
+  message: string;
+  affectedElementIds: string[];
+  affectedRelationshipIds: string[];
+  category:
+    | "identity"
+    | "relationship"
+    | "traceability"
+    | "completeness"
+    | "process"
+    | "parameter"
+    | "feature"
+    | "formula"
+    | "comparison"
+    | "export"
+    | "persistence";
+  resolved: boolean;
+}
+```
+
+Stage A initializes:
+- Project.schemaVersion = 1;
+- Project.modelRevision = 1;
+- configurations, simulationRuns, comparisonStudies, comparisonRisks, and decisions as empty or sample future-stage structures where explicitly required;
+- PersistedAppState.snapshots as an empty array.
+
+ARCHITECTURE APPLICABILITY
+
+Rules:
+- architectureScope = "common" means architectureId must be undefined;
+- architectureScope = "specific" means architectureId must reference an existing architecture;
+- common elements are applicable to every architecture;
+- specific elements are applicable only to their referenced architecture;
+- every ElementType may be common or specific;
+- architecture filtering always preserves common elements;
+- a relationship with architectureId undefined is common;
+- a relationship with architectureId set is applicable only to that architecture;
+- relationship endpoints must be compatible with the relationship architecture context.
+
+BASELINE AND ACTIVE ARCHITECTURE INVARIANTS
+
+- At most one architecture may have status "baseline".
+- When an architecture becomes baseline:
+  - Project.baselineArchitectureId is set to that ID;
+  - any previous baseline architecture becomes "candidate".
+- Clearing the baseline removes baselineArchitectureId and changes the previous baseline to "candidate".
+- Project.activeArchitectureId is a user context selection only and does not change architecture status.
+- Deleting the active or baseline architecture requires confirmation and a clear explanation of affected elements and relationships.
+
+ALLOWED RELATIONSHIPS
+
+Implement only these source —relationship→ target combinations:
+
+- stakeholder —ownedBy→ need
+- need —derives→ requirement
+- requirement —refines→ requirement
+- logicalElement —satisfies→ requirement
+- technicalElement —satisfies→ requirement
+- verificationMethod —verifies→ requirement
+- useCase —realizes→ need
+- function —realizes→ requirement
+- function —refines→ function
+- logicalElement —performs→ function
+- technicalElement —performs→ function
+- technicalElement —realizes→ logicalElement
+- technicalElement —connects→ interface
+- logicalElement —connects→ interface
+- interface —connects→ interface
+- process —realizes→ technicalElement
+- process —realizes→ logicalElement
+- process —dependsOn→ process
+- process —consumes→ technicalElement
+- process —produces→ technicalElement
+- process —requiresResource→ resource
+- resource —allocatedTo→ process
+- process —verifies→ requirement
+- verificationMethod —allocatedTo→ process
+
+Relationship rules:
+- source and target must exist;
+- source, relationship type, and target must match an allowed combination;
+- self-references are forbidden;
+- exact duplicates are forbidden;
+- process self-dependency is forbidden;
+- process dependency cycles are rejected or reported as blocking errors;
+- invalid combinations are rejected before saving with a plain-language explanation;
+- the editor filters compatible source, relationship, and target choices;
+- requiredQuantity is valid only on requiresResource relationships;
+- when present, requiredQuantity must be finite and greater than zero;
+- deleting an element warns about all affected relationships and, after confirmation, deletes those relationships;
+- graph and matrix use the same canonical Relationship records.
+
+DIGITAL-THREAD PRESENTATION
+
+Stored relationship directions remain authoritative. The user-facing path view may traverse relationships in either direction to present:
+
+Need → Requirement → Function → Logical or Technical Element → Process → Resource
+
+The path view must not create new relationships or reverse stored source/target data.
+
+PROJECT AND MODEL CRUD
+
+Users must be able to:
+- create, edit, duplicate, switch, delete, and reset projects;
+- create, edit, duplicate, select, and delete architectures;
+- create, edit, duplicate where useful, and delete every ElementType;
+- assign common or architecture-specific scope;
+- edit tags, metadata, parameters, and value origin;
+- search and filter by type, status, architecture, scope, and tag;
+- select an element and inspect properties, parameters, upstream links, downstream links, and validation findings;
+- navigate from elements to related items;
+- create, edit, and delete valid relationships;
+- receive safe confirmation before destructive cascades.
+
+PROJECT DUPLICATION
+
+Duplicating a project:
+- creates a new project ID and new project name;
+- deep-copies all project content;
+- may preserve nested element and relationship IDs because projects are isolated;
+- resets createdAt and updatedAt;
+- preserves modelRevision value or resets it to 1 consistently and documents the choice;
+- does not duplicate application-level snapshots.
+
+PROMPT-A VALIDATION RULES
+
+Errors:
+- PMA-001 Duplicate ID within the project.
+- PMA-002 Relationship references a missing source or target.
+- PMA-003 Invalid relationship combination.
+- PMA-004 Exact duplicate relationship.
+- PMA-005 Self-reference.
+- PMA-006 Process dependency cycle.
+- PMA-007 Invalid architecture reference.
+- PMA-008 architectureScope and architectureId are inconsistent.
+- PMA-009 Baseline architecture invariants are inconsistent.
+- PMA-010 Invalid requiredQuantity on a relationship.
+
+Warnings:
+- PMA-101 Missing element description.
+- PMA-102 Requirement without connected function.
+- PMA-103 Function without logical or technical allocation.
+- PMA-104 Technical element without realization process.
+- PMA-105 Process without required resource.
+- PMA-106 Process without positive duration.
+- PMA-107 Numeric parameter with value but without unit.
+- PMA-108 Isolated element.
+- PMA-109 Specific element without valid architectureId.
+- PMA-110 Resource used by a process without hourlyRate.
+- PMA-111 Duplicate parameter name on the same owner.
+
+Information:
+- PMA-201 Element remains in draft status.
+- PMA-202 Architecture has no assigned specific elements.
+- PMA-203 Element has no source, owner, or tags.
+- PMA-204 Common element applies to every architecture.
+
+Validation behavior:
+- visible manual validation action;
+- automatically refresh relevant checks after domain edits;
+- show counts by severity;
+- group and filter by category and severity;
+- navigate from a finding to affected data;
+- explain each rule in plain language;
+- label results “Simplified model-quality checks”;
+- never label them regulatory or certification compliance.
+
+TRACEABILITY METRICS
+
+Calculate and display:
+- Need coverage = needs connected to at least one requirement / total needs × 100.
+- Requirement-to-function coverage = requirements connected to at least one function / total requirements × 100.
+- Function-to-architecture coverage = functions connected to at least one logical or technical element / total functions × 100.
+- Architecture-to-process coverage = technical elements connected to at least one realization process / total technical elements × 100.
+- Process-to-resource coverage = processes connected to at least one required resource / total processes × 100.
+- End-to-end coverage = needs for which at least one path exists through Need → Requirement → Function → Logical or Technical Element → Process → Resource / total needs × 100.
+
+Show numerator, denominator, formula, and path interpretation for each metric. If a denominator is zero, show “Not available” and explain that no applicable source elements exist.
+
+MODEL COMPLETENESS AND MATURITY
+
+Model completeness:
+
+completed applicable required fields / all applicable required fields × 100
+
+Required-field checks:
+- every element: non-empty name, description, status;
+- numeric parameter with a value: unit;
+- process: positive duration and duration unit;
+- resource referenced by requiresResource: finite non-negative hourlyRate;
+- specific element: valid architectureId.
+
+Approval maturity:
+
+approved elements / total elements × 100
+
+Overall model maturity:
+
+40% model completeness
++ 40% end-to-end traceability coverage
++ 20% approval maturity
+
+If a component denominator is zero:
+- display that component as Not available;
+- exclude it from the weighted average;
+- renormalize the remaining component weights;
+- display the full calculation.
+
+DASHBOARD
+
+Display live data:
+- project name and description;
+- objectives;
+- active architecture;
+- baseline architecture;
+- architecture concepts;
+- assumptions;
+- open decisions;
+- validation error/warning/information counts;
+- all traceability metrics;
+- model completeness;
+- approval maturity;
+- overall model maturity;
+- missing information;
+- deterministic recommended actions based on current validation findings.
+
+Recommended actions are rule-based and may include:
+- add missing descriptions;
+- connect requirements to functions;
+- allocate functions to architecture elements;
+- connect technical elements to processes;
+- assign resources;
+- resolve process cycles;
+- add missing units;
+- review draft items.
+
+PERSISTENCE AND RECOVERY
+
+- Autosave after domain edits using the debounced versioned root state.
+- Preserve all current project edits after refresh.
+- Never silently overwrite corrupt storage.
+- “Reset sample project” affects only the active project and requires confirmation.
+- Provide an optional “Reset entire local application” action with stronger confirmation.
+- Do not implement operational snapshots in Stage A.
+- Define migration functions even if only schema 1 exists.
+- Keep migration logic pure and covered by tests.
+
+SAMPLE PROJECT
+
+Preload an editable project named:
+
+Configurable Industrial Assembly Machine
+
+Purpose:
+demonstrate early definition of manual-assisted and automated assembly architectures.
+
+Objectives:
+- increase production throughput;
+- maintain product quality;
+- reduce manufacturing lead time;
+- control investment and operating cost;
+- support customer-specific product configurations.
+
+Architectures:
+1. Manual-Assisted Assembly — candidate.
+2. Automated Assembly — candidate.
+
+Do not choose a baseline by default.
+
+Stakeholders:
+- Production Manager
+- Machine Operator
+- Quality Manager
+- Customer Programme Manager
+
+Needs:
+- Increased production throughput
+- Consistent assembly quality
+- Safe operator interaction
+- Customer-specific configuration
+- Controlled programme cost
+
+Requirements:
+- The system shall achieve the target production throughput.
+- The system shall verify critical assembly characteristics.
+- The system shall provide safe operator access.
+- The system shall support configurable product options.
+- The system shall record assembly and test results.
+- The system shall remain within the preliminary cost target.
+
+Use cases:
+- Configure production order
+- Assemble product
+- Inspect assembled product
+- Handle rejected product
+- Export production result
+
+Functions:
+- Load components
+- Position components
+- Join components
+- Inspect assembly
+- Record process data
+- Unload finished product
+
+Logical elements:
+- Material handling subsystem
+- Assembly subsystem
+- Inspection subsystem
+- Control subsystem
+- Safety subsystem
+
+Manual-assisted technical elements:
+- Operator loading station
+- Manual assembly fixture
+- Powered fastening tool
+- Vision-assisted inspection station
+- Industrial controller
+- Safety enclosure
+
+Automated technical elements:
+- Automated component feeder
+- Industrial robot
+- Automated fastening module
+- Inline vision inspection module
+- Industrial controller
+- Safety enclosure
+
+Interfaces:
+- Component transfer interface
+- Mechanical positioning interface
+- Electrical power interface
+- Control-data interface
+- Safety interlock interface
+
+Processes:
+- Component preparation
+- Component loading
+- Component positioning
+- Fastening
+- Inspection
+- Rework decision
+- Product unloading
+- Result documentation
+
+Resources:
+- Assembly operator
+- Quality technician
+- Manufacturing engineer
+- Manual assembly fixture
+- Powered fastening tool
+- Industrial robot
+- Automated fastening module
+- Vision inspection equipment
+- Industrial controller software
+- Assembly area
+
+Verification methods:
+- Cycle-time analysis
+- Dimensional inspection
+- Safety review
+- Preliminary cost assessment
+
+Create valid relationships demonstrating:
+- ownership;
+- derivation;
+- requirement-to-function traceability;
+- function allocation;
+- logical-to-technical realization;
+- interfaces;
+- process realization;
+- process dependencies;
+- resource requirements;
+- verification.
+
+Include:
+- at least one complete need-to-resource path beginning at Increased production throughput;
+- sequential process dependencies;
+- at least one parallel process branch;
+- parameters on technical elements, processes, and resources;
+- valid units;
+- one assumption;
+- one open decision;
+- one intentional non-destructive warning;
+- no broken references.
+
+Create future-stage sample structures for:
+- at least six features;
+- two configurations;
+- four KPI definitions.
+
+They must conform to the final interfaces but must not be evaluated or presented as calculated in Stage A.
+
+AUTOMATED TESTS
+
+Use Vitest. At minimum test:
+- allowed relationship combinations;
+- forbidden relationship combinations;
+- duplicate relationship rejection;
+- self-reference rejection;
+- architecture-scope validation;
+- element delete cascade;
+- missing-reference detection;
+- process dependency-cycle detection;
+- all six traceability metrics;
+- zero-denominator handling;
+- model maturity renormalization;
+- project serialization and restoration;
+- corrupt-storage recovery path;
+- Stage-A sample-data reference integrity.
+
+STAGE-A ACCEPTANCE TESTS
+
+Stage A is complete only if:
+1. Application starts without unresolved imports or runtime errors.
+2. Sample project appears on first launch.
+3. Dashboard displays objectives, architectures, assumptions, open decisions, validation, traceability, completeness, and maturity.
+4. Browser refresh retains edits.
+5. User can create, edit, duplicate, switch, delete, and reset projects.
+6. Reset requires confirmation.
+7. User can create, edit, select, delete, and set baseline architecture concepts.
+8. Baseline and active architecture invariants remain consistent.
+9. Architecture filtering preserves common elements.
+10. User can create, edit, duplicate, and delete every ElementType.
+11. User can set architectureScope and architectureId consistently.
+12. User can edit tags, metadata, parameters, and value origin.
+13. User can search and filter by type, status, architecture, scope, and tag.
+14. Selecting an element shows complete details and upstream/downstream links.
+15. User can create a valid relationship.
+16. Relationship editor offers only compatible combinations.
+17. Invalid, duplicate, and self-referential relationships are rejected.
+18. requiresResource quantity is stored on the relationship and validated.
+19. Deleting an element warns and removes referencing relationships after confirmation.
+20. Graph is generated from canonical project elements and relationships.
+21. Selecting a graph node opens its element.
+22. Graph filters work by type and architecture.
+23. Traceability matrix shows canonical relationships.
+24. Selecting a matrix cell explains or opens the relationship.
+25. Sample contains a visible complete need-to-resource path.
+26. User can manually run validation.
+27. Relevant checks refresh after edits.
+28. Results are filterable by severity and category.
+29. Selecting a finding navigates to affected data.
+30. A process cycle is detected.
+31. A process without a resource produces a warning.
+32. A numeric parameter without a unit produces a warning.
+33. All six traceability metrics show numerator, denominator, and formula.
+34. Zero denominators show Not available.
+35. Model completeness and maturity show transparent calculations.
+36. Seven workspaces exist.
+37. Dashboard and Model are fully functional.
+38. Future workspaces show honest informative empty states.
+39. Final future-stage interfaces exist in TypeScript.
+40. PersistedAppState uses schema version 1 and application-level snapshots.
+41. Corrupt localStorage does not get silently overwritten.
+42. No mandatory control is a non-working placeholder.
+43. No mandatory TODO or FIXME marker remains.
+44. Terminology is consistent.
+45. The repository can be extended by Stages B and C without replacing the core store.
+46. npm install, typecheck, test, and build all succeed.
+
+OUTPUT REQUIREMENTS
+
+Include all source and configuration files, exact package versions, package-lock.json, TypeScript and Vite configuration, Tailwind configuration, reusable layout/form/table components, interfaces, canonical Zustand store, persistence and migration utilities, validation utilities, graph cycle detection, traceability metrics, maturity calculations, editable sample data, graph and matrix components, tests, README, CHANGELOG, and ACCEPTANCE_RESULTS_A.md.
+
+Before finalizing, verify TypeScript consistency, imports, startup, navigation, project switching, persistence, recovery, CRUD, delete cascade, graph rendering, matrix consistency, validation, cycle detection, metrics, sample references, accessibility, tests, and every acceptance test.

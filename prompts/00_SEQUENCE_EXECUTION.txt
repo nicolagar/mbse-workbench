@@ -1,0 +1,52 @@
+# Sequence Controller — Execute A → B → C
+
+Use this file as the controlling instruction for the three prompt files.
+
+Execute Prompt A, then Prompt B, then Prompt C against the same project directory.
+
+Read the current stage prompt completely before modifying files.
+
+Rules:
+1. Never recreate the repository after Stage A.
+2. Never discard working functionality from an earlier stage.
+3. Earlier-stage acceptance tests become regression tests in later stages.
+4. Use one canonical Project model and one canonical Zustand store.
+5. Use versioned, pure, idempotent migrations.
+6. Preserve browser-stored projects whenever the schema changes.
+7. Snapshots are application-level and are never nested in Project.
+8. IDs must be unique inside one project; separate projects may reuse nested IDs.
+9. Derived models, simulations, comparisons, and snapshots are immutable historical records.
+10. Never silently recalculate or replace historical records.
+11. Project.modelRevision controls stale/current status.
+12. Do not proceed to the next stage until npm install, typecheck, tests, and build pass.
+13. Fix failures within the current stage without requesting a separate repair iteration.
+14. Stage C runs every Stage-A, Stage-B, and Stage-C regression test.
+15. Create or update README.md, CHANGELOG.md, and stage acceptance results after each stage.
+16. Use exact dependency versions and package-lock.json.
+17. Do not use eval, Function, arbitrary JavaScript execution, external APIs, or runtime CDNs.
+18. Preserve the complete vertical workflow:
+    Need → Requirement → Function → Architecture Element → Process → Resource
+    → Feature Configuration → 100% Model
+    → Parameters/KPIs → Simulation
+    → Comparison → Decision → Snapshot → Export.
+
+Conflict priority:
+1. data integrity and safety;
+2. explicit algorithm and data-model definitions;
+3. backward compatibility;
+4. acceptance tests;
+5. functional completeness;
+6. transparent validation;
+7. UX/accessibility;
+8. decorative polish.
+
+Stage completion gate:
+- npm install succeeds;
+- npm run typecheck succeeds;
+- npm run test succeeds;
+- npm run build succeeds;
+- mandatory acceptance results are PASS;
+- current-stage application is runnable;
+- no mandatory placeholder or TODO remains.
+
+Start with Prompt A only. After Stage A is verified, execute Prompt B in the same repository. After Stage B is verified, execute Prompt C in the same repository.
