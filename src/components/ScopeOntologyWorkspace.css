@@ -1,0 +1,209 @@
+.scope-ontology {
+  --scope-ink: #172735;
+  --scope-muted: #5d6d79;
+  --scope-line: #d8e2e7;
+  --scope-blue: #155e75;
+  color: var(--scope-ink);
+  overflow: hidden;
+  border: 1px solid var(--scope-line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / .06);
+}
+
+.scope-ontology button,
+.scope-ontology input,
+.scope-ontology select { font: inherit; }
+.scope-ontology button,
+.scope-ontology select { cursor: pointer; }
+
+.scope-ontology__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--scope-line);
+  background: #fff;
+}
+.scope-ontology__header h1 { margin: 3px 0 2px; font-size: 25px; font-weight: 700; letter-spacing: -.035em; }
+.scope-ontology__header p { max-width: 850px; margin: 0; color: var(--scope-muted); font-size: 13px; line-height: 1.5; }
+.scope-ontology__eyebrow,
+.scope-ontology__kicker { color: var(--scope-blue); font-size: 10px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+.scope-ontology__schema { flex: 0 0 auto; padding: 7px 9px; border: 1px solid var(--scope-line); border-radius: 5px; color: var(--scope-muted); font-size: 11px; }
+
+.scope-ontology__body { display: grid; grid-template-columns: 205px minmax(0, 1fr); min-height: 720px; }
+.scope-ontology__rail { padding: 17px 11px; border-right: 1px solid var(--scope-line); background: #fff; }
+.scope-ontology__rail h2 { margin: 3px 9px 10px; color: var(--scope-muted); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+.scope-ontology__rail nav button {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--scope-ink);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: left;
+}
+.scope-ontology__rail nav button:hover,
+.scope-ontology__rail nav button.active { background: #e7f1f4; color: var(--scope-blue); }
+.scope-ontology__rail nav b { margin-top: 2px; color: var(--scope-muted); font-size: 9px; font-variant-numeric: tabular-nums; }
+.scope-ontology__rail > p { margin: 14px 8px 0; padding-top: 13px; border-top: 1px solid var(--scope-line); color: var(--scope-muted); font-size: 10px; line-height: 1.55; }
+
+.scope-ontology__main { min-width: 0; padding: 15px 18px; background: #f8fafb; }
+.scope-ontology__toolbar,
+.scope-ontology__subtoolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.scope-ontology__scope,
+.scope-ontology__tools,
+.scope-ontology__subtoolbar [role="tablist"] { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.scope-ontology__toolbar button,
+.scope-ontology__subtoolbar button,
+.scope-ontology__tools select {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--scope-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--scope-ink);
+  font-size: 11px;
+}
+.scope-ontology__toolbar button:hover,
+.scope-ontology__subtoolbar button:hover { background: #edf5f7; }
+.scope-ontology__toolbar button.active,
+.scope-ontology__subtoolbar button.active { border-color: var(--scope-ink); background: var(--scope-ink); color: #fff; }
+.scope-ontology__scope button { min-width: 118px; }
+.scope-ontology__finder { display: flex; align-items: center; gap: 6px; margin-left: 5px; padding-left: 10px; border-left: 1px solid var(--scope-line); color: var(--scope-muted); font-size: 10px; }
+.scope-ontology__finder select { min-width: 170px; padding: 8px; border: 1px solid var(--scope-line); border-radius: 6px; background: #fff; color: var(--scope-ink); font-size: 11px; }
+.scope-ontology__zoom { min-width: 38px; color: var(--scope-muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: center; }
+
+.scope-ontology__legend { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; color: var(--scope-muted); font-size: 10px; }
+.scope-ontology__legend span { display: flex; align-items: center; gap: 6px; }
+.scope-ontology__legend b { color: var(--scope-ink); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.scope-ontology__legend i { width: 24px; border-top: 2px solid #334155; }
+.scope-ontology__legend i.role-supporting { border-color: #64748b; }
+.scope-ontology__legend i.role-constraint { border-color: #7c3aed; }
+.scope-ontology__legend i.role-evidence { border-color: #0f766e; }
+.scope-ontology__legend i.typed { border-color: #19758a; border-top-style: dashed; }
+.scope-ontology__legend i.embedded { border-color: #697987; border-top-style: dotted; }
+.scope-ontology__legend i.reference { height: 11px; border: 1px dashed #19758a; border-radius: 8px; background: #f4fbfc; }
+
+.scope-ontology__workspace { display: grid; grid-template-columns: minmax(0, 1fr) 0; gap: 0; }
+.scope-ontology__workspace.open { grid-template-columns: minmax(0, 1fr) 315px; gap: 10px; }
+.scope-ontology__viewport {
+  position: relative;
+  height: 740px;
+  min-height: 520px;
+  max-height: 78vh;
+  overflow: auto;
+  border: 1px solid var(--scope-line);
+  border-radius: 8px;
+  background-color: #fff;
+  background-image: radial-gradient(#dae4e8 .7px, transparent .7px);
+  background-size: 18px 18px;
+  cursor: default;
+  scroll-behavior: smooth;
+}
+.scope-ontology__viewport.dragging { cursor: grabbing; user-select: none; }
+.scope-ontology__viewport svg { display: block; max-width: none; transform-origin: top left; }
+.scope-ontology__hint { position: sticky; bottom: 10px; left: 10px; display: inline-block; margin: 0 0 10px 10px; padding: 6px 8px; border: 1px solid var(--scope-line); border-radius: 5px; background: rgb(255 255 255 / .95); color: var(--scope-muted); font-size: 10px; pointer-events: none; }
+
+.scope-ontology__environment-title { fill: var(--scope-ink); font-size: 17px; font-weight: 650; }
+.scope-ontology__environment-note { fill: var(--scope-muted); font-size: 11px; }
+.scope-ontology__row-label { fill: #60737f; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.scope-ontology__dim { opacity: .1; }
+.scope-ontology__dim-section { opacity: .3; }
+
+.scope-ontology__connection-halo { fill: none; stroke: #fff; stroke-width: 6; pointer-events: none; }
+.scope-ontology__connection-line { fill: none; stroke: #334155; stroke-width: 1.9; stroke-linejoin: round; }
+.scope-ontology__connection-line--typed { stroke-dasharray: 7 5; }
+.scope-ontology__connection-line--embedded { stroke-dasharray: 3 5; }
+.scope-ontology__connection-line--role-supporting { stroke: #64748b; }
+.scope-ontology__connection-line--role-constraint { stroke: #7c3aed; }
+.scope-ontology__connection-line--role-evidence { stroke: #0f766e; }
+
+.scope-ontology__node,
+.scope-ontology__reference { cursor: pointer; transition: opacity .12s ease; }
+.scope-ontology__node rect.main { fill: #fff; stroke: #bacbd3; stroke-width: 1.3; }
+.scope-ontology__node.optional rect.main { stroke-dasharray: 5 4; }
+.scope-ontology__node rect.stripe { fill: #347b93; stroke: none; }
+.scope-ontology__node--eval rect.stripe { fill: #43846c; }
+.scope-ontology__node--trade rect.stripe,
+.scope-ontology__node--decision rect.stripe { fill: #7a5d9c; }
+.scope-ontology__node text { fill: var(--scope-ink); font-size: 14px; font-weight: 650; }
+.scope-ontology__node text.type { fill: var(--scope-muted); font-size: 10px; font-weight: 400; }
+.scope-ontology__node:hover rect.main,
+.scope-ontology__node:focus rect.main,
+.scope-ontology__node.selected rect.main { stroke: #19758a; stroke-width: 2.4; }
+.scope-ontology__node.selected rect.main { fill: #eaf7f9; }
+.scope-ontology__reference rect { fill: #f5fbfc; stroke: #19758a; stroke-width: 1.4; stroke-dasharray: 4 3; }
+.scope-ontology__reference text { fill: #19758a; font-size: 11px; }
+.scope-ontology__reference:hover rect,
+.scope-ontology__reference:focus rect { fill: #e5f5f7; stroke-width: 2.2; }
+
+.scope-ontology__connector-toggle { cursor: pointer; }
+.scope-ontology__connector-toggle rect { fill: #fff; stroke: #537889; stroke-width: 1.2; }
+.scope-ontology__connector-toggle text { fill: #155e75; font: 700 16px ui-sans-serif, system-ui; pointer-events: none; }
+.scope-ontology__connector-toggle:hover rect,
+.scope-ontology__connector-toggle:focus rect { fill: #e5f5f7; stroke: #155e75; stroke-width: 2; }
+.scope-ontology__label-leader { stroke: #8296a0; stroke-width: .8; }
+.scope-ontology__label-back { fill: #fff; stroke: #dce6ea; stroke-width: .7; }
+.scope-ontology__label-text { fill: #294554; font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+
+.scope-ontology__inspector { overflow: auto; max-height: 740px; padding: 15px; border: 1px solid var(--scope-line); border-radius: 8px; background: #fff; }
+.scope-ontology__close { float: right; padding: 3px; border: 0; border-radius: 5px; background: transparent; }
+.scope-ontology__inspector h2 { margin: 7px 0 4px; font-size: 18px; }
+.scope-ontology__inspector h3 { margin: 18px 0 4px; font-size: 13px; }
+.scope-ontology__inspector p { color: var(--scope-muted); font-size: 11px; line-height: 1.6; }
+.scope-ontology__inspector code,
+.scope-ontology__register code { color: #294554; font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+.scope-ontology__connection-detail { padding: 9px 0; border-top: 1px solid var(--scope-line); font-size: 11px; line-height: 1.45; }
+.scope-ontology__connection-detail p { margin-bottom: 0; }
+.scope-ontology__status { display: flex; justify-content: space-between; gap: 15px; flex-wrap: wrap; margin: 8px 2px 0; color: var(--scope-muted); font-size: 10px; }
+
+.scope-ontology__register { padding: 17px; border: 1px solid var(--scope-line); border-radius: 8px; background: #fff; }
+.scope-ontology__register h2 { margin: 0; font-size: 17px; }
+.scope-ontology__register > p { margin: 4px 0 10px; color: var(--scope-muted); font-size: 11px; }
+.scope-ontology__register-search { display: flex; align-items: center; gap: 8px; margin: 10px 0; color: var(--scope-muted); font-size: 10px; }
+.scope-ontology__register-search input { width: min(100%, 420px); padding: 9px; border: 1px solid var(--scope-line); border-radius: 6px; }
+.scope-ontology__table-wrap { overflow: auto; }
+.scope-ontology__register table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.scope-ontology__register th,
+.scope-ontology__register td { padding: 9px 8px; border-bottom: 1px solid var(--scope-line); line-height: 1.45; text-align: left; vertical-align: top; }
+.scope-ontology__register th { color: var(--scope-muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+
+@media (max-width: 1280px) {
+  .scope-ontology__body { grid-template-columns: 165px minmax(0, 1fr); }
+  .scope-ontology__workspace.open { grid-template-columns: 1fr; }
+  .scope-ontology__workspace.open .scope-ontology__inspector { max-height: 390px; }
+  .scope-ontology__scope button { min-width: 0; }
+  .scope-ontology__finder { margin-left: 0; padding-left: 0; border-left: 0; }
+  .scope-ontology__viewport { height: 680px; }
+}
+
+@media (max-width: 760px) {
+  .scope-ontology__header { align-items: flex-start; padding: 15px; }
+  .scope-ontology__header h1 { font-size: 23px; }
+  .scope-ontology__schema { display: none; }
+  .scope-ontology__body { display: block; }
+  .scope-ontology__rail { padding: 9px; border-right: 0; border-bottom: 1px solid var(--scope-line); }
+  .scope-ontology__rail h2,
+  .scope-ontology__rail > p { display: none; }
+  .scope-ontology__rail nav { display: flex; gap: 4px; overflow: auto; }
+  .scope-ontology__rail nav button { flex: 0 0 auto; width: auto; padding: 7px; border: 1px solid var(--scope-line); }
+  .scope-ontology__rail nav b { display: none; }
+  .scope-ontology__main { padding: 11px; }
+  .scope-ontology__scope { width: 100%; }
+  .scope-ontology__scope button { flex: 1; }
+  .scope-ontology__tools select { max-width: 170px; }
+  .scope-ontology__finder span { display: none; }
+  .scope-ontology__viewport { min-height: 500px; max-height: 70vh; }
+  .scope-ontology__legend { gap: 9px; }
+}
