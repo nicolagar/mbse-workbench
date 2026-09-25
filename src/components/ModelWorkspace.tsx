@@ -21,6 +21,7 @@ import {
 import { selectActiveProject, useAppStore } from "../store/useAppStore";
 import { ElementEditor } from "./ElementEditor";
 import { FunctionSequencePanel } from "./FunctionSequencePanel";
+import { LaneTraceGraphView } from "./LaneTraceGraphView";
 import { ModelGraph } from "./ModelGraph";
 import { ModellingRecap } from "./ModellingRecap";
 import { RelationshipManager } from "./RelationshipManager";
@@ -70,6 +71,7 @@ export function ModelWorkspace() {
   const [unitDialogOpen, setUnitDialogOpen] = useState(false);
   const [relationshipEditorOpen, setRelationshipEditorOpen] = useState(false);
   useEffect(() => setRelationshipEditorOpen(false), [activeTab]);
+  const [graphSubView, setGraphSubView] = useState<"architecture" | "laneTrace">("architecture");
   const selected = project.elements.find((element) => element.id === selectedElementId);
   const selectedConfiguration = project.configurations.find((configuration) =>
     project.architectures.find((architecture) => architecture.id === architectureId)?.configurationId === configuration.id
@@ -212,7 +214,22 @@ export function ModelWorkspace() {
             }} />
             <section className="card overflow-hidden"><button className="flex w-full items-center gap-2 p-4 text-left font-bold" aria-expanded={relationshipEditorOpen} onClick={() => setRelationshipEditorOpen((open) => !open)}>{relationshipEditorOpen ? <ChevronDown size={17} /> : <ChevronRight size={17} />}Relationship editor<span className="ml-auto text-xs font-normal text-slate-500">{relationshipEditorOpen ? "Hide" : "Show"}</span></button>{relationshipEditorOpen && <div className="border-t border-slate-200 p-4"><RelationshipManager /></div>}</section>
           </>}
-          {effectiveView === "graph" && <section className="card overflow-hidden"><div className="flex items-center gap-4 border-b border-slate-200 p-4"><div className="min-w-0 flex-1"><h2 className="font-bold">{tab.graphLabel}</h2><p className="text-xs text-slate-500">{tab.graphDescription} Newly created elements appear immediately; typed context references are shown as dashed teal connections.</p></div><label className="w-48"><span className="label">Layout</span><select className="field" value={layoutMode} onChange={(event) => setGraphLayoutMode(activeTab, event.target.value as GraphLayoutMode)}>{tab.graphLayoutModes.map((mode) => <option value={mode} key={mode}>{mode === "manual" ? "Manual positions" : mode === "hierarchy" ? "Automatic hierarchy" : mode === "horizontal" ? "Left-to-right hierarchy" : "Sequence stages"}</option>)}</select></label></div><ModelGraph elements={diagramElements} relationships={diagramRelationships} contextRelationships={diagramContextRelationships} layoutMode={layoutMode} layoutKey={`tab:${activeTab}`} scopedElementIds={scopeIds} /></section>}
+          {effectiveView === "graph" && <section className="card overflow-hidden">
+            <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 p-4">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-bold">{graphSubView === "laneTrace" ? "Lane trace digital thread" : tab.graphLabel}</h2>
+                <p className="text-xs text-slate-500">{graphSubView === "laneTrace" ? "One lane per element type, color-coded by type. Select elements and trace upstream or downstream to see exactly what's connected, with the rest of each lane collapsed out of the way. Typed context references are not included." : `${tab.graphDescription} Newly created elements appear immediately; typed context references are shown as dashed teal connections.`}</p>
+              </div>
+              <div className="flex gap-1 rounded-lg border border-slate-200 p-1">
+                <button className={`btn !border-0 ${graphSubView === "architecture" ? "bg-blue-50 text-blue-700" : ""}`} onClick={() => setGraphSubView("architecture")}>Architecture graph</button>
+                <button className={`btn !border-0 ${graphSubView === "laneTrace" ? "bg-blue-50 text-blue-700" : ""}`} onClick={() => setGraphSubView("laneTrace")}>Lane trace</button>
+              </div>
+              {graphSubView === "architecture" && <label className="w-48"><span className="label">Layout</span><select className="field" value={layoutMode} onChange={(event) => setGraphLayoutMode(activeTab, event.target.value as GraphLayoutMode)}>{tab.graphLayoutModes.map((mode) => <option value={mode} key={mode}>{mode === "manual" ? "Manual positions" : mode === "hierarchy" ? "Automatic hierarchy" : mode === "horizontal" ? "Left-to-right hierarchy" : "Sequence stages"}</option>)}</select></label>}
+            </div>
+            {graphSubView === "architecture"
+              ? <ModelGraph elements={diagramElements} relationships={diagramRelationships} contextRelationships={diagramContextRelationships} layoutMode={layoutMode} layoutKey={`tab:${activeTab}`} scopedElementIds={scopeIds} />
+              : <LaneTraceGraphView elements={diagramElements} relationships={diagramRelationships} />}
+          </section>}
           {effectiveView === "diagram" && tab.sequenceDomain && <FunctionSequencePanel domain={tab.sequenceDomain} contextElements={diagramElements} layoutMode={layoutMode} onLayoutModeChange={(mode) => setGraphLayoutMode(activeTab, mode)} scopedElementIds={scopeIds} />}
           {effectiveView === "requirementsOverview" && <RequirementsValidationOverview />}
           {effectiveView === "sectionRecap" && <SectionRecap tab={activeTab} />}
